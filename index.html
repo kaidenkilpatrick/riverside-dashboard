@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Riverside Dashboard</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d3b6e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RS Dashboard">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--navy:#0d3b6e;--blue:#1a6bb5;--teal:#0e9178;--purple:#7c3aed;--orange:#e67e22;--pink:#db2777;--red:#c0392b;--gold:#d4a017;--bg:#f4f5f8;--card:#fff;--border:#e0e3e8;--text:#1a1a1a;--muted:#666;--light:#f7f8fa}
+html,body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;background:var(--bg);color:var(--text);min-height:100vh;overscroll-behavior:none}
+
+/* WELCOME */
+#welcome{position:fixed;inset:0;z-index:1000;background:linear-gradient(145deg,#0a2d52 0%,#0d3b6e 50%,#0f4a8a 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center}
+.w-logo{width:64px;height:64px;border-radius:16px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:#fff;margin:0 auto 1.5rem;border:2px solid rgba(255,255,255,.2)}
+.w-greeting{font-size:13px;font-weight:600;color:rgba(255,255,255,.6);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem}
+.w-name{font-size:36px;font-weight:800;color:#fff;margin-bottom:.25rem}
+.w-date{font-size:14px;color:rgba(255,255,255,.65);margin-bottom:.5rem}
+.w-clock{font-size:48px;font-weight:300;color:#fff;margin-bottom:1.5rem;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.w-quote{font-size:13px;color:rgba(255,255,255,.55);font-style:italic;max-width:320px;line-height:1.6;margin-bottom:2rem;padding:0 1rem}
+.w-nav{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:1.5rem;max-width:400px}
+.w-navbtn{padding:7px 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s}
+.w-navbtn:hover{background:rgba(255,255,255,.22);border-color:rgba(255,255,255,.5)}
+.w-start{padding:12px 32px;border-radius:30px;border:none;background:#fff;color:var(--navy);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s}
+.w-start:hover{background:#e8edf5;transform:translateY(-1px)}
+.w-dismiss{position:absolute;top:1rem;right:1rem;background:none;border:none;color:rgba(255,255,255,.4);font-size:20px;cursor:pointer;padding:8px}
+
+/* TOP BAR */
+.topbar{display:flex;align-items:center;gap:8px;padding:.6rem 1rem;background:var(--navy);position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.t-logo{width:36px;height:36px;border-radius:8px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#fff;flex-shrink:0;cursor:pointer}
+.t-title{font-size:14px;font-weight:700;color:#fff;flex:1}
+.t-sub{font-size:10px;color:rgba(255,255,255,.55)}
+.t-time{font-size:12px;color:rgba(255,255,255,.7);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* TABS */
+.tabs{display:flex;gap:2px;background:var(--card);border-bottom:2px solid var(--border);padding:0 .5rem;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{padding:9px 14px;border:none;background:transparent;font-size:12px;font-weight:600;cursor:pointer;color:var(--muted);white-space:nowrap;font-family:inherit;border-bottom:2px solid transparent;margin-bottom:-2px;transition:color .15s}
+.tab.on{color:var(--navy);border-bottom-color:var(--navy)}
+.tab:hover:not(.on){color:var(--text)}
+.panel{display:none;padding:1rem;max-width:1400px;margin:0 auto}
+.panel.on{display:block}
+
+/* CARDS */
+.card{background:var(--card);border-radius:12px;border:1px solid var(--border);padding:1rem 1.1rem;margin-bottom:1rem}
+.section-hd{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:.75rem;display:flex;align-items:center;gap:6px}
+.section-hd span{font-size:14px}
+
+/* HOME GRID */
+.home-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:600px){.home-grid{grid-template-columns:1fr}}
+
+/* FOCUS */
+.focus-wrap{background:linear-gradient(135deg,#0a2d52,#1a6bb5);border-radius:12px;padding:1rem 1.1rem;margin-bottom:1rem}
+.focus-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.6);margin-bottom:6px}
+.focus-inp{width:100%;border:none;background:transparent;font-size:16px;font-weight:600;color:#fff;outline:none;font-family:inherit}
+.focus-inp::placeholder{color:rgba(255,255,255,.35);font-weight:400}
+
+/* TODO */
+.todo-add{display:flex;gap:6px;margin-bottom:10px}
+.todo-add input{flex:1;padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;background:var(--light);color:var(--text)}
+.todo-add input:focus{outline:none;border-color:var(--blue)}
+.todo-add button{padding:7px 12px;border-radius:8px;border:1px solid var(--navy);background:var(--navy);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.todo-list{display:flex;flex-direction:column;gap:5px;max-height:220px;overflow-y:auto}
+.todo-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;background:var(--light);border:1px solid var(--border)}
+.todo-item.done{opacity:.45}
+.todo-item.done .todo-txt{text-decoration:line-through}
+.todo-ck{width:16px;height:16px;border-radius:4px;border:1.5px solid #ccc;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:#fff}
+.todo-ck.on{background:var(--blue);border-color:var(--blue)}
+.todo-ck.on::after{content:'';width:4px;height:8px;border:2px solid #fff;border-top:none;border-left:none;transform:rotate(45deg) translateY(-1px);display:block}
+.todo-txt{font-size:13px;flex:1}
+.todo-del{border:none;background:none;color:#bbb;cursor:pointer;font-size:16px;padding:0 2px}
+.todo-del:hover{color:var(--red)}
+
+/* QUICK LINKS */
+.qlink{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;background:var(--light);border:1px solid var(--border);margin-bottom:5px;text-decoration:none;color:var(--text);font-size:13px}
+.qlink:hover{border-color:var(--blue);color:var(--blue)}
+.qlink-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+
+/* CHECKLIST */
+.check-prog{height:6px;background:var(--light);border-radius:99px;margin-bottom:12px;overflow:hidden;border:1px solid var(--border)}
+.check-fill{height:100%;background:var(--blue);border-radius:99px;transition:width .3s}
+.check-prog-label{font-size:11px;color:var(--muted);margin-bottom:8px}
+.cgroup{background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden}
+.cgroup-hd{padding:8px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--light);border-bottom:1px solid var(--border)}
+.ci{display:flex;align-items:flex-start;gap:9px;padding:8px 12px;border-bottom:1px solid #f0f1f3;cursor:pointer}
+.ci:last-child{border-bottom:none}
+.ci-box{width:16px;height:16px;border-radius:4px;border:1.5px solid #ccc;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;background:#fff}
+.ci-box.on{background:var(--blue);border-color:var(--blue)}
+.ci-box.on::after{content:'';width:4px;height:8px;border:2px solid #fff;border-top:none;border-left:none;transform:rotate(45deg) translateY(-1px);display:block}
+.ci-lbl{font-size:13px;color:var(--text);flex:1;line-height:1.4}
+.ci-lbl.done{text-decoration:line-through;color:#aaa}
+.ci-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.done-banner{background:#d1fae5;border:1px solid #6ee7b7;border-radius:8px;padding:9px 14px;font-size:13px;color:#065f46;text-align:center;margin-bottom:10px;display:none}
+.reset-note{font-size:11px;color:var(--muted);text-align:center;margin-top:8px}
+
+/* ANALYTICS */
+.plat-tabs{display:flex;gap:6px;margin-bottom:1rem}
+.ptab{padding:6px 16px;border-radius:20px;border:1.5px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;background:#fff;color:var(--muted);font-family:inherit}
+.ptab.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:1rem}
+.mcard{background:var(--light);border-radius:10px;padding:10px 12px;border:1px solid var(--border)}
+.mcard-lbl{font-size:11px;color:var(--muted);margin-bottom:3px}
+.mcard-val{font-size:22px;font-weight:700;color:var(--text)}
+.mcard-delta{font-size:11px;margin-top:2px}
+.delta-up{color:#059669}
+.delta-dn{color:var(--red)}
+.chart-wrap{background:#fff;border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1rem;position:relative;height:260px}
+.analytics-form{background:var(--light);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1rem}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:10px}
+.form-field label{font-size:11px;font-weight:600;color:var(--muted);display:block;margin-bottom:3px}
+.form-field input{width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;background:#fff}
+.form-field input:focus{outline:none;border-color:var(--blue)}
+.save-btn{padding:7px 16px;border-radius:8px;border:none;background:var(--navy);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.save-btn:hover{background:var(--blue)}
+.confirm{font-size:12px;color:#059669;margin-left:8px;display:none}
+.analytics-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media(max-width:640px){.analytics-grid{grid-template-columns:1fr}}
+
+/* COMMUNITIES */
+.toolbar{display:flex;gap:7px;align-items:center;margin-bottom:.9rem;flex-wrap:wrap}
+.searchbox{flex:1;min-width:140px;padding:7px 10px 7px 30px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:#fff;color:var(--text);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:9px center}
+.searchbox:focus{outline:none;border-color:var(--blue)}
+.fbtn{padding:6px 12px;border-radius:20px;border:1.5px solid var(--border);background:#fff;font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);font-family:inherit}
+.fbtn.on{color:#fff}
+.add-btn{padding:6px 12px;border-radius:8px;border:1.5px solid var(--navy);background:transparent;color:var(--navy);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit}
+.add-btn:hover{background:var(--navy);color:#fff}
+.comm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:9px}
+.ccard{border-radius:11px;border:2px solid;padding:.85rem;cursor:pointer;transition:transform .14s,box-shadow .14s;position:relative}
+.ccard:hover{transform:translateY(-2px);box-shadow:0 5px 18px rgba(0,0,0,.12)}
+.ccard-stripe{position:absolute;top:0;left:0;right:0;height:4px;border-radius:9px 9px 0 0}
+.ccard-name{font-size:13px;font-weight:800;margin-bottom:3px}
+.ccard-city{font-size:11px;margin-bottom:5px;opacity:.8}
+.ccard-row{font-size:11px;padding:1.5px 0;display:flex;gap:4px}
+.ck{color:#888;flex-shrink:0;min-width:42px}
+.cv{font-weight:600}
+.mgr-lbl{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-top:5px;display:inline-block}
+.legend{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:.75rem}
+.leg{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700}
+.leg-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+
+/* ORG CHART */
+.org-legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1rem}
+.org-tree{padding:.5rem 0}
+.org-node{margin-bottom:2px}
+.org-row{display:flex;align-items:center;gap:0;padding:2px 0}
+.org-indent{display:flex;align-items:stretch;flex-shrink:0}
+.org-line{width:20px;border-right:1.5px solid #dde;position:relative}
+.org-line.last::before{content:'';position:absolute;right:0;top:50%;width:14px;height:1.5px;background:#dde;transform:translateY(-50%)}
+.org-conn{width:14px;height:1.5px;background:#dde;flex-shrink:0}
+.org-card{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:9px;border:1.5px solid;cursor:pointer;flex:1;min-width:0;transition:box-shadow .15s}
+.org-card:hover{box-shadow:0 3px 10px rgba(0,0,0,.1)}
+.org-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0}
+.org-info{flex:1;min-width:0}
+.org-name{font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.org-role{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.org-toggle{font-size:10px;font-weight:700;color:inherit;opacity:.6;flex-shrink:0;padding:2px 5px;border-radius:4px;border:none;background:none;cursor:pointer;font-family:inherit}
+.org-children{padding-left:20px}
+.org-detail{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:1rem;display:none}
+.org-detail.open{display:block}
+.od-head{display:flex;align-items:flex-start;gap:10px;margin-bottom:.75rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)}
+.od-av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0}
+.od-name{font-size:15px;font-weight:800}
+.od-role{font-size:12px;color:var(--muted);margin-top:2px}
+.od-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-top:4px;display:inline-block}
+.od-acts{display:flex;gap:5px;flex-wrap:wrap;margin-left:auto}
+.od-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--light);font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);font-family:inherit}
+.od-btn:hover{border-color:var(--blue);color:var(--blue)}
+.od-btn.del{color:var(--red);border-color:rgba(192,57,43,.3)}
+.ctag{font-size:11px;padding:3px 9px;border-radius:6px;background:var(--light);border:1px solid var(--border);display:inline-flex;align-items:center;gap:3px;margin:3px 2px}
+.ctag a{text-decoration:none;font-weight:600;color:inherit}
+.org-topbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
+
+/* GBP */
+.gbp-prog{height:8px;background:var(--light);border-radius:99px;margin-bottom:.5rem;overflow:hidden;border:1px solid var(--border)}
+.gbp-fill{height:100%;background:var(--blue);border-radius:99px;transition:width .4s}
+.gbp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px;max-height:400px;overflow-y:auto}
+.gbp-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);background:var(--light)}
+.gbp-item.done{border-color:#6ee7b7;background:#f0fdf4}
+.gbp-dots{display:flex;gap:4px}
+.gbp-dot{width:9px;height:9px;border-radius:50%;border:1.5px solid #ccc;cursor:pointer;flex-shrink:0}
+.gbp-dot.claimed{background:var(--blue);border-color:var(--blue)}
+.gbp-dot.verified{background:#059669;border-color:#059669}
+.gbp-dot.desc{background:var(--orange);border-color:var(--orange)}
+.gbp-name{font-size:12px;flex:1}
+.gbp-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--muted)}
+.gbp-leg{display:flex;align-items:center;gap:4px}
+
+/* CONTACTS */
+.contacts-toolbar{display:flex;gap:7px;align-items:center;margin-bottom:1rem;flex-wrap:wrap}
+.pri-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+.pri-high{background:#fee2e2;color:#991b1b}
+.pri-med{background:#fef3c7;color:#92400e}
+.pri-low{background:#d1fae5;color:#065f46}
+.contact-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.contact-card{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:1rem;position:relative;transition:box-shadow .15s}
+.contact-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.08)}
+.cc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+.cc-company{font-size:14px;font-weight:800;color:var(--navy)}
+.cc-role{font-size:11px;color:var(--muted);margin-top:2px}
+.cc-contact{font-size:12px;font-weight:600;color:var(--text);margin-bottom:4px;margin-top:6px}
+.cc-info{font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:2px}
+.cc-info a{color:var(--blue);text-decoration:none;font-weight:600}
+.cc-actions{display:flex;gap:5px;margin-top:10px}
+.cc-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--light);font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);font-family:inherit}
+.cc-btn:hover{border-color:var(--blue);color:var(--blue)}
+.cc-btn.del{color:var(--red);border-color:rgba(192,57,43,.3)}
+.cc-notes{font-size:11px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px solid var(--border);line-height:1.5}
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--muted);font-size:13px}
+
+/* CONSTRUCTION */
+.am-header{border-radius:10px;padding:.65rem 1rem;margin-bottom:.75rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.am-name{font-size:13px;font-weight:800;color:#fff}
+.am-sub{font-size:11px;color:rgba(255,255,255,.85)}
+.am-cities{font-size:10px;color:rgba(255,255,255,.7);margin-left:auto;text-align:right;max-width:50%;line-height:1.5}
+.builder-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px;margin-bottom:1.3rem}
+.b-card{background:#fff;border:1.5px solid var(--border);border-radius:9px;padding:.7rem .8rem;position:relative}
+.b-card .row-btns{position:absolute;top:5px;right:5px;display:flex;gap:3px;opacity:0;transition:opacity .15s}
+.b-card:hover .row-btns{opacity:1}
+.row-btn{padding:2px 7px;border-radius:5px;border:1px solid var(--border);background:#fff;font-size:10px;font-weight:600;cursor:pointer;color:var(--muted);font-family:inherit}
+.row-btn.del{color:var(--red);border-color:rgba(192,57,43,.4)}
+.b-name{font-size:12px;font-weight:700;margin-bottom:2px}
+.b-comm{font-size:11px}
+.b-city{font-size:10px;color:#888;margin-top:1px}
+.b-phone{margin-top:5px;font-size:11px;font-weight:600}
+.b-phone a{text-decoration:none}
+
+/* WINS */
+.wins-ta{width:100%;min-height:90px;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:13px;font-family:inherit;color:var(--text);resize:none;background:var(--light)}
+.wins-ta:focus{outline:none;border-color:var(--blue);background:#fff}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:flex-start;justify-content:center;padding:28px 12px;overflow-y:auto}
+.overlay.open{display:flex}
+.modal{background:#fff;color:var(--text);border-radius:14px;width:min(560px,100%);padding:1.2rem;position:relative;box-shadow:0 8px 40px rgba(0,0,0,.25);margin:auto}
+.mx{position:absolute;top:.85rem;right:.85rem;width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:var(--light);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.mx:hover{background:var(--border)}
+.mt{font-size:14px;font-weight:800;margin-bottom:.8rem}
+.fl{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:3px;margin-top:9px}
+.fl:first-child{margin-top:0}
+.fi{width:100%;padding:7px 9px;border:1px solid var(--border);border-radius:7px;background:#fff;font-size:13px;color:var(--text);font-family:inherit}
+.fi:focus{outline:none;border-color:var(--blue)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.bs{padding:7px 16px;border-radius:7px;border:none;background:var(--navy);color:#fff;font-size:12px;font-weight:700;cursor:pointer;margin-top:9px;font-family:inherit}
+.bs:hover{background:var(--blue)}
+.bc{padding:7px 12px;border-radius:7px;border:1px solid var(--border);background:transparent;font-size:12px;cursor:pointer;color:var(--muted);margin-left:6px;margin-top:9px;font-family:inherit}
+</style>
+</head>
+<body>
+
+<!-- WELCOME SCREEN -->
+<div id="welcome">
+  <button class="w-dismiss" onclick="hideWelcome()" title="Skip">✕</button>
+  <div class="w-logo">RS</div>
+  <div class="w-greeting" id="w-greeting">Good morning</div>
+  <div class="w-name">Kaiden 👋</div>
+  <div class="w-date" id="w-date"></div>
+  <div class="w-clock" id="w-clock">—</div>
+  <div class="w-quote" id="w-quote"></div>
+  <div class="w-nav">
+    <button class="w-navbtn" onclick="jumpTo('home')">🏠 Home</button>
+    <button class="w-navbtn" onclick="jumpTo('checklist')">✅ Checklist</button>
+    <button class="w-navbtn" onclick="jumpTo('analytics')">📊 Analytics</button>
+    <button class="w-navbtn" onclick="jumpTo('gbp')">📍 GBP</button>
+    <button class="w-navbtn" onclick="jumpTo('org')">👥 Org Chart</button>
+    <button class="w-navbtn" onclick="jumpTo('contacts')">🗂 Contacts</button>
+  </div>
+  <button class="w-start" onclick="hideWelcome()">Start my day →</button>
+</div>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="t-logo" onclick="showWelcome()" title="Back to welcome screen">RS</div>
+  <div><div class="t-title">Riverside Homebuilders</div><div class="t-sub">Kaiden's Dashboard · Summer 2026</div></div>
+  <div class="t-time" id="topbar-clock"></div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab on" data-p="home" onclick="showTab('home',this)">🏠 Home</button>
+  <button class="tab" data-p="checklist" onclick="showTab('checklist',this)">✅ Checklist</button>
+  <button class="tab" data-p="analytics" onclick="showTab('analytics',this)">📊 Analytics</button>
+  <button class="tab" data-p="communities" onclick="showTab('communities',this)">🏘 Communities</button>
+  <button class="tab" data-p="gbp" onclick="showTab('gbp',this)">📍 GBP</button>
+  <button class="tab" data-p="org" onclick="showTab('org',this)">👥 Org Chart</button>
+  <button class="tab" data-p="contacts" onclick="showTab('contacts',this)">🗂 Contacts</button>
+  <button class="tab" data-p="construction" onclick="showTab('construction',this)">🔨 Construction</button>
+</div>
+
+<!-- HOME PANEL -->
+<div id="panel-home" class="panel on">
+  <div class="focus-wrap">
+    <div class="focus-lbl">⚡ Today's focus</div>
+    <input class="focus-inp" id="focus-inp" placeholder="What's the one thing you need to get done today?">
+  </div>
+  <div class="home-grid">
+    <div>
+      <div class="card">
+        <div class="section-hd"><span>☑️</span> To-Do List</div>
+        <div class="todo-add">
+          <input type="text" id="todo-inp" placeholder="Add a task…">
+          <button onclick="addTodo()">+</button>
+        </div>
+        <div class="todo-list" id="todo-list"></div>
+      </div>
+      <div class="card">
+        <div class="section-hd"><span>📝</span> Weekly Wins &amp; Notes</div>
+        <textarea class="wins-ta" id="wins-ta" placeholder="Log wins, ideas, follow-ups — good for your end-of-summer recap…"></textarea>
+        <button class="save-btn" style="margin-top:8px" onclick="saveWins()">Save notes</button>
+        <span class="confirm" id="wins-confirm">Saved!</span>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="section-hd"><span>🔗</span> Quick Links</div>
+        <a class="qlink" href="https://business.google.com" target="_blank"><span class="qlink-icon">📍</span>Google Business Profile</a>
+        <a class="qlink" href="https://www.instagram.com/riversidehomebuilders" target="_blank"><span class="qlink-icon">📸</span>Instagram @riversidehomebuilders</a>
+        <a class="qlink" href="https://business.facebook.com" target="_blank"><span class="qlink-icon">👍</span>Meta Business Suite</a>
+        <a class="qlink" href="https://app.socialpilot.co" target="_blank"><span class="qlink-icon">🗓</span>SocialPilot</a>
+        <a class="qlink" href="https://search.google.com/search-console" target="_blank"><span class="qlink-icon">📈</span>Google Search Console</a>
+        <a class="qlink" href="https://analytics.google.com" target="_blank"><span class="qlink-icon">📊</span>Google Analytics</a>
+        <a class="qlink" href="https://www.canva.com" target="_blank"><span class="qlink-icon">🎨</span>Canva</a>
+        <a class="qlink" href="https://mail.google.com" target="_blank"><span class="qlink-icon">✉️</span>Gmail</a>
+        <a class="qlink" href="https://teams.microsoft.com" target="_blank"><span class="qlink-icon">💬</span>Microsoft Teams</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CHECKLIST PANEL -->
+<div id="panel-checklist" class="panel">
+  <div class="card">
+    <div class="section-hd"><span>☀️</span> Morning Routine
+      <span id="checklist-reset" style="margin-left:auto;font-size:11px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0"></span>
+    </div>
+    <div class="done-banner" id="done-banner">Morning routine complete — great start to the day! 🎉</div>
+    <div class="check-prog-label" id="check-prog-label"></div>
+    <div class="check-prog"><div class="check-fill" id="check-fill" style="width:0%"></div></div>
+    <div id="checklist-groups"></div>
+    <div class="reset-note" id="reset-note"></div>
+  </div>
+</div>
+
+<!-- ANALYTICS PANEL -->
+<div id="panel-analytics" class="panel">
+  <div class="plat-tabs">
+    <button class="ptab on" onclick="switchPlat('instagram',this)">📸 Instagram</button>
+    <button class="ptab" onclick="switchPlat('facebook',this)">👍 Facebook</button>
+  </div>
+  <div class="metric-grid" id="metric-grid"></div>
+  <div class="analytics-grid">
+    <div class="chart-wrap"><canvas id="chart-trends"></canvas></div>
+    <div class="chart-wrap"><canvas id="chart-engage"></canvas></div>
+  </div>
+  <div class="analytics-form">
+    <div class="section-hd"><span>📥</span> Log This Week's Stats</div>
+    <div class="form-grid" id="form-grid"></div>
+    <button class="save-btn" onclick="saveAnalytics()">Save Weekly Stats</button>
+    <span class="confirm" id="analytics-confirm">Saved!</span>
+  </div>
+  <div class="card" id="history-table-wrap">
+    <div class="section-hd"><span>🗂</span> History</div>
+    <div id="history-table" style="overflow-x:auto"></div>
+  </div>
+</div>
+
+<!-- COMMUNITIES PANEL -->
+<div id="panel-communities" class="panel">
+  <div class="legend">
+    <span style="font-size:11px;font-weight:700;color:var(--muted)">Color:</span>
+    <span class="leg"><span class="leg-dot" style="background:#0e9178"></span>Amanda (East)</span>
+    <span class="leg"><span class="leg-dot" style="background:#7c3aed"></span>Dominic (West)</span>
+  </div>
+  <div class="toolbar">
+    <input class="searchbox" type="text" placeholder="Search community, city, person…" oninput="filterComms(this.value)">
+    <button class="fbtn on" data-f="all" onclick="setFilter(this,'all')" style="background:var(--navy);border-color:var(--navy);color:#fff">All</button>
+    <button class="fbtn" data-f="amanda" onclick="setFilter(this,'amanda')">Amanda</button>
+    <button class="fbtn" data-f="dominic" onclick="setFilter(this,'dominic')">Dominic</button>
+    <button class="add-btn" onclick="openAddComm()">+ Add Community</button>
+  </div>
+  <div class="comm-grid" id="comm-grid"></div>
+</div>
+
+<!-- GBP PANEL -->
+<div id="panel-gbp" class="panel">
+  <div class="card">
+    <div class="section-hd"><span>📍</span> GBP Community Tracker</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:6px" id="gbp-count"></div>
+    <div class="gbp-prog"><div class="gbp-fill" id="gbp-fill"></div></div>
+    <div class="gbp-grid" id="gbp-grid"></div>
+    <div class="gbp-legend">
+      <div class="gbp-leg"><div class="gbp-dot claimed"></div> Claimed</div>
+      <div class="gbp-leg"><div class="gbp-dot verified"></div> Verified</div>
+      <div class="gbp-leg"><div class="gbp-dot desc"></div> Description written</div>
+    </div>
+  </div>
+</div>
+
+<!-- ORG CHART PANEL -->
+<div id="panel-org" class="panel">
+  <div class="org-legend">
+    <span class="leg"><span class="leg-dot" style="background:#0d3b6e"></span>Leadership</span>
+    <span class="leg"><span class="leg-dot" style="background:#1a6bb5"></span>Sales</span>
+    <span class="leg"><span class="leg-dot" style="background:#db2777"></span>Marketing</span>
+    <span class="leg"><span class="leg-dot" style="background:#e67e22"></span>Construction</span>
+    <span class="leg"><span class="leg-dot" style="background:#d4a017"></span>Purchasing</span>
+    <span class="leg"><span class="leg-dot" style="background:#0e9178"></span>CSM East</span>
+    <span class="leg"><span class="leg-dot" style="background:#7c3aed"></span>CSM West</span>
+    <span class="leg"><span class="leg-dot" style="background:#c0392b"></span>Builders</span>
+  </div>
+  <div class="org-topbar">
+    <button class="add-btn" onclick="openAddOrgPerson(null)">+ Add Person</button>
+    <button class="fbtn" onclick="expandAllOrg()">Expand All</button>
+    <button class="fbtn" onclick="collapseAllOrg()">Collapse All</button>
+  </div>
+  <div class="org-detail" id="org-detail"></div>
+  <div class="org-tree" id="org-tree"></div>
+</div>
+
+<!-- CONTACTS PANEL -->
+<div id="panel-contacts" class="panel">
+  <div class="contacts-toolbar">
+    <input class="searchbox" type="text" placeholder="Search company or contact…" oninput="filterContacts(this.value)" style="max-width:260px">
+    <button class="fbtn on" data-pf="all" onclick="setPriFilter(this,'all')" style="background:var(--navy);border-color:var(--navy);color:#fff">All</button>
+    <button class="fbtn" data-pf="High" onclick="setPriFilter(this,'High')">🔴 High</button>
+    <button class="fbtn" data-pf="Medium" onclick="setPriFilter(this,'Medium')">🟡 Medium</button>
+    <button class="fbtn" data-pf="Low" onclick="setPriFilter(this,'Low')">🟢 Low</button>
+    <button class="add-btn" onclick="openAddContact()" style="margin-left:auto">+ Add Contact</button>
+  </div>
+  <div class="contact-grid" id="contact-grid"></div>
+</div>
+
+<!-- CONSTRUCTION PANEL -->
+<div id="panel-construction" class="panel">
+  <div id="const-content"></div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" onclick="maybeClose(event)">
+  <div class="modal"><button class="mx" onclick="closeModal()">✕</button><div id="modal-body"></div></div>
+</div>
+
+<script>
+// ── QUOTES ──────────────────────────────────────────────────────────────
+const QUOTES=[
+  "Small disciplines repeated with consistency every day lead to great achievements gained slowly over time.",
+  "The secret of getting ahead is getting started.",
+  "You don't have to be great to start, but you have to start to be great.",
+  "Opportunities don't happen. You create them.",
+  "Success is the sum of small efforts, repeated day in and day out.",
+  "Show up, do the work, build something you're proud of.",
+  "Every expert was once a beginner. Every pro was once an amateur.",
+];
+
+// ── DATA ─────────────────────────────────────────────────────────────────
+const DKEY='rs_dash_v3';
+const MGR_COLOR={amanda:'#0e9178',dominic:'#7c3aed',shared:'#e67e22',none:'#888'};
+const dayColor={Mon:'#e67e22',Tue:'#7c3aed',Wed:'#1a6bb5',Thurs:'#0e9178',Thu:'#0e9178',Fri:'#c0392b',Tues:'#7c3aed',Weds:'#1a6bb5'};
+const ORG_DC={leadership:'#0d3b6e','sales-mgmt':'#1a6bb5','online-sales':'#d4a017',marketing:'#db2777','const-ops':'#e67e22',purchasing:'#d4a017','csm-east':'#0e9178','csm-west':'#7c3aed',builders:'#c0392b'};
+const ORG_DL={leadership:'Leadership','sales-mgmt':'Sales Mgmt','online-sales':'Online Sales',marketing:'Marketing','const-ops':'Construction Ops',purchasing:'Purchasing','csm-east':'CSM East','csm-west':'CSM West',builders:'Builders'};
+
+const GBP_COMMUNITIES=['Aero Vista','Bellmeade Farms','Cedar Ridge','Clear Sky','Colina Creek','Covenant Park','Covenant Springs','Eagle Ridge','Fairview Meadows','Fannin Ranch','Grayson Ridge','Hillcrest Meadows','Hillview Addition','King Crossing','Liberty Pointe','Magnolia West','Morningstar','Nash Estates','Northstar','Oak Grove Addition','Oak Valley','Parker Heights','Raintree','Rocky Top','Saddle Brook','Terra Escalante','The Hollow','Vista Oaks','Waterford','Westpoint Park'];
+
+const DEFAULT_ORG=[
+  {id:'tim',parent:null,dept:'leadership',name:'Tim Fleet',role:'President & Founder',cell:'',email:'',note:'3rd-generation homebuilder. Grandson of C.P. Hadley, son of M.B. Fleet.'},
+  {id:'cabot',parent:'tim',dept:'sales-mgmt',name:'Cabot Greenfield',role:'VP of Sales & Marketing',cell:'',email:'',note:''},
+  {id:'phil',parent:'tim',dept:'const-ops',name:'Phil King',role:'VP of Construction',cell:'',email:'',note:''},
+  {id:'tg',parent:'tim',dept:'marketing',name:'T.G.',role:'VP of Marketing',cell:'',email:'',note:'Full name not yet confirmed'},
+  {id:'kellie',parent:'tim',dept:'purchasing',name:'Kellie Boling',role:'Director of Purchasing',cell:'',email:'',note:'Oversees vendor relationships'},
+  {id:'coleen',parent:'tim',dept:'purchasing',name:'Coleen Sutton',role:'Director of Starts',cell:'',email:'',note:'Manages the home start process'},
+  {id:'amanda',parent:'cabot',dept:'sales-mgmt',name:'Amanda Houston',role:'East Division Sales Mgr',cell:'940.595.1642',email:'ahouston@rshomebuilders.com',note:'Manages all East Division CSMs'},
+  {id:'dominic',parent:'cabot',dept:'sales-mgmt',name:'Dominic Baca',role:'West Division Sales Mgr',cell:'505.604.2510',email:'dbaca@rshomebuilders.com',note:'Manages all West Division CSMs'},
+  {id:'christina',parent:'cabot',dept:'online-sales',name:'Christina Hampton',role:'Online Sales Counselor',cell:'817.734.8528',email:'champton@rshomebuilders.com',note:''},
+  {id:'claudia',parent:'cabot',dept:'online-sales',name:'Claudia Gomez',role:'Online Sales Counselor',cell:'682.402.9194',email:'claudia.gomez@rshomebuilders.com',note:''},
+  {id:'avery',parent:'tg',dept:'marketing',name:'Avery Johnson',role:'Marketing Director',cell:'',email:'',note:'Branding, signage, digital marketing'},
+  {id:'cg',parent:'tg',dept:'marketing',name:'C.G.',role:'VP of Marketing',cell:'',email:'',note:'Full name not yet confirmed'},
+  {id:'kaiden',parent:'avery',dept:'marketing',name:'Kaiden Kilpatrick',role:'Marketing Intern',cell:'',email:'kaiden@rshomebuilders.com',note:'Social media, GBP, graphics, reporting'},
+  {id:'shane',parent:'phil',dept:'const-ops',name:'Shane Kilpatrick',role:'Sr. Director Construction Ops',cell:'',email:'',note:''},
+  {id:'robert-am',parent:'shane',dept:'const-ops',name:'Robert Alexander',role:'Area Manager',cell:'817-773-3736',email:'',note:'Aledo, Azle, Springtown, Weatherford, Westworth Village, Saginaw'},
+  {id:'hector',parent:'shane',dept:'const-ops',name:'Hector Hernandez',role:'Area Manager',cell:'214-986-4646',email:'',note:'Anna, Blue Ridge, Caddo Mills, Farmersville, Royse City, Terrell, Van Alstyne'},
+  {id:'wade',parent:'shane',dept:'const-ops',name:'Wade Wiese',role:'Area Manager',cell:'214-864-9850',email:'',note:'Decatur, Gainesville, New Fairview, Krum, Valley View, Fort Worth'},
+  {id:'dean',parent:'shane',dept:'const-ops',name:'Dean Davis',role:'Area Manager',cell:'',email:'',note:'Ryan Sessions reports to Dean Davis'},
+  {id:'ashley',parent:'amanda',dept:'csm-east',name:'Ashley Bell',role:'CSM · Grayson Ridge',cell:'469-734-6686',email:'abell@rshomebuilders.com',note:'Off: Thur/Fri · Asst: Nadia Robinson 469-452-4317'},
+  {id:'desiree',parent:'amanda',dept:'csm-east',name:'Desiree Baca',role:'CSM · Terra Escalante',cell:'505-379-2842',email:'desiree.baca@rshomebuilders.com',note:'Off: Tue/Wed'},
+  {id:'finnye',parent:'amanda',dept:'csm-east',name:'Finnye Shipley',role:'CSM · Cedar Ridge',cell:'214-532-8583',email:'finnye.shipley@rshomebuilders.com',note:'Off: Wed/Thurs'},
+  {id:'jamie',parent:'amanda',dept:'csm-east',name:'Jamie Miller',role:'CSM · King Crossing / Raintree',cell:'817-505-6886',email:'jamie.miller@rshomebuilders.com',note:'Off: Thur/Fri · Asst: Jimmy Logan 806-570-9924'},
+  {id:'kevin',parent:'amanda',dept:'csm-east',name:'Kevin Jones',role:'CSM · Fannin Ranch / Nash',cell:'972-834-0225',email:'kjones@rshomebuilders.com',note:'Off: Wed/Thurs · Asst: Jacquelyn Tilly 817-716-0106'},
+  {id:'kyle',parent:'amanda',dept:'csm-east',name:'Kyle Powell',role:'CSM · Creekview / Saddle Brook',cell:'469-671-8759',email:'kpowell@rshomebuilders.com',note:'Off: Wed/Thurs · Asst: Tegan Specht 940-597-8527'},
+  {id:'sylvia',parent:'amanda',dept:'csm-east',name:'Sylvia Carpio',role:'CSM · Liberty Pointe',cell:'940-300-6188',email:'scarpio@rshomebuilders.com',note:'Off: Thur/Fri · Asst: Angelica Castro 940-629-3791'},
+  {id:'thurston',parent:'amanda',dept:'csm-east',name:'Thurston Johnson',role:'CSM · Aero Vista / Vista Oaks',cell:'214-682-4960',email:'tjohnson@rshomebuilders.com',note:'Off: Mon/Tue'},
+  {id:'tori',parent:'amanda',dept:'csm-east',name:'Tori Smith',role:'CSM · Cedar Ridge',cell:'214-733-7492',email:'tori.smith@rshomebuilders.com',note:'Off: Mon/Tue'},
+  {id:'valerie',parent:'amanda',dept:'csm-east',name:'Valerie Martinez',role:'CSM · Clearsky / Parker Hts',cell:'817-627-8445',email:'valerie.martinez@rshomebuilders.com',note:'Off: Thur/Fri'},
+  {id:'arliah',parent:'dominic',dept:'csm-west',name:'Arliah Perez',role:'CSM · Northstar',cell:'682-283-2512',email:'arliah.perez@rshomebuilders.com',note:'Off: Wed/Thur · Asst: Casey Roebuck 817-680-6853'},
+  {id:'bobbie',parent:'dominic',dept:'csm-west',name:'Bobbie Johnson',role:'CSM · Waterford',cell:'214-734-8582',email:'bobbie.johnson@rshomebuilders.com',note:'Off: Thur/Fri · Asst: Meghan Willard 817.584.9392'},
+  {id:'bryan',parent:'dominic',dept:'csm-west',name:'Bryan Shaffer',role:'CSM · Hillview',cell:'940-531-8726',email:'bryan.shaffer@rshomebuilders.com',note:'Off: Thur/Fri · Asst: Pamela McGrody 801-888-0621'},
+  {id:'cami',parent:'dominic',dept:'csm-west',name:'Cami Hoppe',role:'CSM · Rocky Top',cell:'817-721-8517',email:'cami.hoppe@rshomebuilders.com',note:'Off: Thur/Fri'},
+  {id:'christy',parent:'dominic',dept:'csm-west',name:'Christy Hodge',role:'CSM · Rocky Top',cell:'817-253-6652',email:'chodge@rshomebuilders.com',note:'Off: Tues/Weds'},
+  {id:'graeme',parent:'dominic',dept:'csm-west',name:'Graeme Robertson',role:'CSM · Magnolia / Westpoint',cell:'817-437-5793',email:'graeme.robertson@rshomebuilders.com',note:'Off: Wed/Thur · Asst: Casey Roebuck 817-680-6853'},
+  {id:'jim',parent:'dominic',dept:'csm-west',name:'Jim Gordy',role:'CSM · Fairview Meadows',cell:'817-938-2860',email:'jim.gordy@rshomebuilders.com',note:'Off: Mon/Tue'},
+  {id:'karolyn',parent:'dominic',dept:'csm-west',name:'Karolyn Shelton',role:'CSM · Fairview Meadows',cell:'817-718-7122',email:'kshelton@rshomebuilders.com',note:'Off: Wed/Thur'},
+  {id:'magan',parent:'dominic',dept:'csm-west',name:'Magan Elkins',role:'CSM · Covenant Springs & Park',cell:'817-501-2036',email:'magan.elkins@rshomebuilders.com',note:'Off: Mon/Tue · Asst: Yesenia Perez 817-565-8916'},
+  {id:'nikki',parent:'dominic',dept:'csm-west',name:'Nikki Lytle',role:'CSM · Eagle Ridge',cell:'469-400-5326',email:'nikki.lytle@rshomebuilders.com',note:'Off: Thur/Fri · Asst: Alma Blanco 817-966-1711'},
+  {id:'shavonne',parent:'dominic',dept:'csm-west',name:'Shavonne Lamb',role:'CSM · Oak Grove',cell:'682-401-2494',email:'smartin@rshomebuilders.com',note:'Off: Thur/Fri · Asst: April Campbell 817-565-2729'},
+  {id:'steve',parent:'dominic',dept:'csm-west',name:'Steve Woodall',role:'CSM · Morningstar',cell:'817-800-0058',email:'steve.woodall@rshomebuilders.com',note:'Off: Mon/Tue · Asst: Lizeth Lozano 817.655.5623'},
+  {id:'paige',parent:'robert-am',dept:'builders',name:'Paige Cain',role:'Builder · Westpoint / Beltmill',cell:'817-676-2693',email:'',note:'Ft Worth / Saginaw'},
+  {id:'dylan',parent:'robert-am',dept:'builders',name:'Dylan Cutler',role:'Builder · Waterford / Eagle Ridge',cell:'817-487-5757',email:'',note:'Azle / Weatherford'},
+  {id:'chris-bane',parent:'robert-am',dept:'builders',name:'Chris Bane',role:'Builder · Covenant Park / Springs',cell:'817-994-1304',email:'',note:'Springtown'},
+  {id:'troy',parent:'robert-am',dept:'builders',name:'Troy Carlisle',role:'Builder · Oak Grove / Eagle Ridge Est',cell:'817-776-1634',email:'',note:'Springtown / Weatherford'},
+  {id:'jordan-b',parent:'robert-am',dept:'builders',name:'Jordan Beisner',role:'Builder · Morningstar',cell:'817-676-2693',email:'',note:'Weatherford'},
+  {id:'ryan',parent:'dean',dept:'builders',name:'Ryan Sessions',role:'Builder · Dean Davis Group',cell:'940-255-2446',email:'',note:'Reports to Dean Davis'},
+  {id:'hulon',parent:'hector',dept:'builders',name:'Hulon Binkley',role:'Builder · Fannin / Grayson Ridge',cell:'214-471-3737',email:'',note:'Anna / Van Alstyne'},
+  {id:'josh-r',parent:'hector',dept:'builders',name:'Josh Rumbaugh',role:'Builder · Fannin / King Crossing',cell:'469-588-1632',email:'',note:'Anna / Van Alstyne'},
+  {id:'dale',parent:'hector',dept:'builders',name:'Dale Perot',role:'Builder · Terra Escalante / Vista Oaks',cell:'972-768-2046',email:'',note:'Blue Ridge / Royse City'},
+  {id:'blake',parent:'hector',dept:'builders',name:'Blake Kohut',role:'Builder · Aero Vista',cell:'214-532-1528',email:'',note:'Caddo Mills'},
+  {id:'zach',parent:'hector',dept:'builders',name:'Zach Hill',role:'Builder Asst · Colina Creek',cell:'469-265-9782',email:'',note:'Farmersville'},
+  {id:'brandon',parent:'hector',dept:'builders',name:'Brandon Graf',role:'Builder · Cedar Ridge',cell:'469-723-8060',email:'',note:'Anna'},
+  {id:'jose',parent:'hector',dept:'builders',name:'Jose Ramirez',role:'Builder · Oak Valley / Raintree',cell:'214-476-4527',email:'',note:'Terrell / Princeton'},
+  {id:'chris-d',parent:'hector',dept:'builders',name:'Chris Duckworth',role:'Builder · Oak Valley',cell:'469-866-9690',email:'',note:'Terrell'},
+  {id:'chris-s',parent:'hector',dept:'builders',name:'Chris Shipley',role:'Builder · Nash Estates / Hollow',cell:'214-794-6308',email:'',note:'Tom Bean / Ennis'},
+  {id:'gilberto',parent:'hector',dept:'builders',name:'Gilberto Gonzales',role:'Builder · Saddle Brook / Creekview',cell:'214-558-3661',email:'',note:'Van Alstyne'},
+  {id:'toby',parent:'wade',dept:'builders',name:'Toby Gray',role:'Builder · Hillcrest / Hillview',cell:'682-803-4483',email:'',note:'Decatur'},
+  {id:'rick',parent:'wade',dept:'builders',name:'Rick LeBeau',role:'Builder · Liberty Pointe',cell:'817-913-1119',email:'',note:'Gainesville'},
+  {id:'collyn',parent:'wade',dept:'builders',name:'Collyn Shipley',role:'Builder · Northstar',cell:'469-474-5117',email:'',note:'Fort Worth'},
+  {id:'joe',parent:'wade',dept:'builders',name:'Joe Johnson',role:'Builder · Clear Sky / Beltmill',cell:'817-734-9486',email:'',note:'Valley View / Saginaw'},
+  {id:'brady',parent:'wade',dept:'builders',name:'Brady LeBeau',role:'Builder · Fairview Meadows',cell:'817-913-5430',email:'',note:'New Fairview'},
+  {id:'shawn',parent:'wade',dept:'builders',name:'Shawn Merchant',role:'Builder · Fairview Meadows',cell:'214-529-2406',email:'',note:'New Fairview'},
+  {id:'jared',parent:'wade',dept:'builders',name:'Jared Goff',role:'Builder · Rocky Top',cell:'469-496-1841',email:'',note:'Krum'},
+  {id:'charles',parent:'wade',dept:'builders',name:'Charles Fuller',role:'Builder · Parker Heights',cell:'817-659-9009',email:'',note:'Valley View'},
+];
+
+const DEFAULT_CONST=[
+  {mgr:'Robert Alexander',cell:'817-773-3736',color:'#e67e22',cities:'Aledo · Alvarado · Azle · Springtown · Weatherford · Westworth Village · Saginaw',builders:[{name:'Paige Cain',comm:'Westpoint Park / Beltmill',city:'Ft Worth / Saginaw',cell:'817-676-2693'},{name:'Dylan Cutler',comm:'Waterford / Eagle Ridge',city:'Azle / Weatherford',cell:'817-487-5757'},{name:'Chris Bane',comm:'Covenant Park / Springs',city:'Springtown',cell:'817-994-1304'},{name:'Troy Carlisle',comm:'Oak Grove / Eagle Ridge Est.',city:'Springtown / Weatherford',cell:'817-776-1634'},{name:'Jordan Beisner',comm:'Morningstar',city:'Weatherford',cell:'817-676-2693'}]},
+  {mgr:'Hector Hernandez',cell:'214-986-4646',color:'#0e9178',cities:'Anna · Blue Ridge · Caddo Mills · Farmersville · Royse City · Terrell · Tom Bean · Van Alstyne · Princeton · Ennis',builders:[{name:'Hulon Binkley',comm:'Fannin Ranch / Grayson Ridge',city:'Anna / Van Alstyne',cell:'214-471-3737'},{name:'Josh Rumbaugh',comm:'Fannin Ranch / King Crossing',city:'Anna / Van Alstyne',cell:'469-588-1632'},{name:'Dale Perot',comm:'Terra Escalante / Vista Oaks',city:'Blue Ridge / Royse City',cell:'972-768-2046'},{name:'Blake Kohut',comm:'Aero Vista',city:'Caddo Mills',cell:'214-532-1528'},{name:'Brandon Graf',comm:'Cedar Ridge',city:'Anna',cell:'469-723-8060'},{name:'Jose Ramirez',comm:'Oak Valley / Raintree',city:'Terrell / Princeton',cell:'214-476-4527'},{name:'Chris Duckworth',comm:'Oak Valley',city:'Terrell',cell:'469-866-9690'},{name:'Chris Shipley',comm:'Nash Estates / The Hollow',city:'Tom Bean / Ennis',cell:'214-794-6308'},{name:'Gilberto Gonzales',comm:'Saddle Brook / Creekview',city:'Van Alstyne',cell:'214-558-3661'}]},
+  {mgr:'Wade Wiese',cell:'214-864-9850',color:'#7c3aed',cities:'Decatur · Gainesville · New Fairview · Krum · Valley View · Saginaw · Fort Worth',builders:[{name:'Toby Gray',comm:'Hillcrest Meadows / Hillview',city:'Decatur',cell:'682-803-4483'},{name:'Rick LeBeau',comm:'Liberty Pointe',city:'Gainesville',cell:'817-913-1119'},{name:'Collyn Shipley',comm:'Northstar',city:'Fort Worth',cell:'469-474-5117'},{name:'Joe Johnson',comm:'Clear Sky / Beltmill',city:'Valley View / Saginaw',cell:'817-734-9486'},{name:'Brady LeBeau',comm:'Fairview Meadows',city:'New Fairview',cell:'817-913-5430'},{name:'Shawn Merchant',comm:'Fairview Meadows',city:'New Fairview',cell:'214-529-2406'},{name:'Jared Goff',comm:'Rocky Top',city:'Krum',cell:'469-496-1841'},{name:'Charles Fuller',comm:'Parker Heights',city:'Valley View',cell:'817-659-9009'}]},
+];
+
+// community data removed for brevity - will pull from default if missing
+const DEFAULT_COMMUNITIES=[];
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let state={todos:[],focus:'',wins:'',gbp:{},checklist:{lastDate:'',checked:{}},analytics:{instagram:[],facebook:[]},contacts:[],orgNodes:JSON.parse(JSON.stringify(DEFAULT_ORG)),communities:JSON.parse(JSON.stringify(DEFAULT_COMMUNITIES)),constGroups:JSON.parse(JSON.stringify(DEFAULT_CONST))};
+
+function loadState(){
+  try{const r=localStorage.getItem(DKEY);if(r){const d=JSON.parse(r);
+    state.todos=d.todos||[];state.focus=d.focus||'';state.wins=d.wins||'';
+    state.gbp=d.gbp||{};state.checklist=d.checklist||{lastDate:'',checked:{}};
+    state.analytics=d.analytics||{instagram:[],facebook:[]};
+    state.contacts=d.contacts||[];
+    state.orgNodes=d.orgNodes||JSON.parse(JSON.stringify(DEFAULT_ORG));
+    state.communities=d.communities&&d.communities.length?d.communities:getDefaultComms();
+    state.constGroups=d.constGroups||JSON.parse(JSON.stringify(DEFAULT_CONST));
+  }else{state.communities=getDefaultComms();}
+  }catch(e){state.communities=getDefaultComms();}
+}
+function saveState(){try{localStorage.setItem(DKEY,JSON.stringify(state));}catch(e){}}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────
+function ini(n){if(!n)return'?';const p=n.trim().split(/\s+/);return(p[0][0]+(p[1]?p[1][0]:'')).toUpperCase();}
+function hx(hex,a){const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return`rgba(${r},${g},${b},${a})`;}
+function oc(d){return ORG_DC[d]||'#888';}
+function todayStr(){const d=new Date();return`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;}
+function weekLabel(){const d=new Date();return`W${Math.ceil(d.getDate()/7)} ${d.toLocaleString('en-US',{month:'short'})} ${d.getFullYear()}`;}
+
+// ── CLOCK ─────────────────────────────────────────────────────────────────
+function updateClock(){
+  const now=new Date();
+  const t=now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const t2=now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+  const el=document.getElementById('w-clock');if(el)el.textContent=t2;
+  const tb=document.getElementById('topbar-clock');if(tb)tb.textContent=t;
+  const reset=document.getElementById('checklist-reset');
+  if(reset){const mn=new Date();mn.setHours(24,0,0,0);const diff=mn-now;const h=Math.floor(diff/3600000),m=Math.floor((diff%3600000)/60000);reset.textContent=`Resets in ${h}h ${m}m`;}
+}
+
+// ── WELCOME ───────────────────────────────────────────────────────────────
+function showWelcome(){
+  const now=new Date(),h=now.getHours();
+  const gr=h<12?'Good morning':h<17?'Good afternoon':'Good evening';
+  document.getElementById('w-greeting').textContent=gr;
+  const d=now.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
+  document.getElementById('w-date').textContent=d;
+  document.getElementById('w-quote').textContent=QUOTES[Math.floor(Math.random()*QUOTES.length)];
+  document.getElementById('welcome').style.display='flex';
+}
+function hideWelcome(){document.getElementById('welcome').style.display='none';}
+function jumpTo(tab){hideWelcome();showTab(tab,document.querySelector(`.tab[data-p="${tab}"]`));}
+
+// ── TABS ──────────────────────────────────────────────────────────────────
+function showTab(id,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.getElementById('panel-'+id).classList.add('on');
+  if(btn)btn.classList.add('on');
+  if(id==='analytics')setTimeout(renderCharts,100);
+  if(id==='org')renderOrgTree();
+  if(id==='communities'&&!document.getElementById('comm-grid').children.length)renderComms();
+  if(id==='construction'&&!document.getElementById('const-content').innerHTML)renderConst();
+}
+
+// ── HOME ──────────────────────────────────────────────────────────────────
+function initHome(){
+  document.getElementById('focus-inp').value=state.focus||'';
+  document.getElementById('focus-inp').addEventListener('input',e=>{state.focus=e.target.value;saveState();});
+  document.getElementById('todo-inp').addEventListener('keydown',e=>{if(e.key==='Enter')addTodo();});
+  document.getElementById('wins-ta').value=state.wins||'';
+  renderTodos();
+}
+function addTodo(){const inp=document.getElementById('todo-inp');const v=inp.value.trim();if(!v)return;state.todos.push({id:Date.now(),text:v,done:false});inp.value='';saveState();renderTodos();}
+function toggleTodo(id){const t=state.todos.find(x=>x.id===id);if(t){t.done=!t.done;saveState();renderTodos();}}
+function deleteTodo(id){state.todos=state.todos.filter(x=>x.id!==id);saveState();renderTodos();}
+function renderTodos(){
+  document.getElementById('todo-list').innerHTML=state.todos.map(t=>`
+    <div class="todo-item${t.done?' done':''}">
+      <div class="todo-ck${t.done?' on':''}" onclick="toggleTodo(${t.id})"></div>
+      <span class="todo-txt${t.done?' done':''}">${t.text}</span>
+      <button class="todo-del" onclick="deleteTodo(${t.id})">×</button>
+    </div>`).join('');
+}
+function saveWins(){state.wins=document.getElementById('wins-ta').value;saveState();const c=document.getElementById('wins-confirm');c.style.display='inline';setTimeout(()=>c.style.display='none',1500);}
+
+// ── CHECKLIST ─────────────────────────────────────────────────────────────
+const CHECKLIST_ITEMS=[
+  {group:'First 5 min',items:[
+    {id:'email',label:'Check email',sub:'Flag anything urgent, note any deadlines'},
+    {id:'teams',label:'Check Microsoft Teams',sub:'Reply to any overnight messages'},
+    {id:'checkin',label:'Check in with Avery / Todd',sub:'Ask what is needed from you today before planning your morning'},
+  ]},
+  {group:'Social + content',items:[
+    {id:'socialpilot',label:'Check SocialPilot',sub:'Confirm scheduled posts went live correctly, see what is going out today'},
+    {id:'metrics',label:'Glance at yesterday\'s metrics',sub:'Quick check on reach, follows, any spikes'},
+    {id:'engage',label:'Engage with 5-8 posts',sub:'Local builders, home decor, neighborhood accounts, relevant hashtags — no generic comments'},
+    {id:'dms',label:'Respond to all comments and DMs',sub:'Every one, same day — non-negotiable for the algorithm'},
+    {id:'graphics',label:'Check if any graphics need to be made',sub:'Check emails, Teams, and any upcoming content gaps'},
+    {id:'competitor',label:'5-min competitor scroll',sub:'Scan other homebuilder accounts — notice patterns, get ideas'},
+    {id:'scheduled',label:'Check posts scheduled for today',sub:'Make sure copy, creative, and timing all look right'},
+  ]},
+  {group:'GBP + reviews',items:[
+    {id:'reviews',label:'Respond to any new GBP reviews',sub:'Both positive and negative — response time matters for ranking'},
+    {id:'qa',label:'Check GBP Q&As',sub:'People ask questions on listings and they often go unanswered'},
+  ]},
+  {group:'Leads + admin',items:[
+    {id:'leads',label:'Check for new leads or form submissions',sub:'Website inquiries or anything that came in overnight'},
+    {id:'todo',label:'Update and reprioritize your to-do list',sub:'Based on what Avery/Todd need and anything from email/Teams'},
+    {id:'yesterday',label:'Log anything completed yesterday',sub:'Keep your tracker current'},
+    {id:'deadlines',label:'Note any deadlines from emails or Teams',sub:'So nothing slips through the cracks'},
+  ]},
+  {group:'Set your intention',items:[
+    {id:'idea',label:'Have one proactive idea ready',sub:'A post idea, a community that needs attention, something you noticed — even if you do not say it out loud today'},
+  ]},
+];
+
+function initChecklist(){
+  const today=todayStr();
+  if(state.checklist.lastDate!==today){state.checklist.checked={};state.checklist.lastDate=today;saveState();}
+  renderChecklist();
+}
+function toggleCheck(id){state.checklist.checked[id]=!state.checklist.checked[id];saveState();renderChecklist();}
+function renderChecklist(){
+  const total=CHECKLIST_ITEMS.reduce((a,g)=>a+g.items.length,0);
+  const done=Object.values(state.checklist.checked).filter(Boolean).length;
+  const pct=total>0?Math.round((done/total)*100):0;
+  document.getElementById('check-fill').style.width=pct+'%';
+  document.getElementById('check-prog-label').textContent=`${done} of ${total} complete`;
+  document.getElementById('done-banner').style.display=done===total?'block':'none';
+  document.getElementById('checklist-groups').innerHTML=CHECKLIST_ITEMS.map(g=>`
+    <div class="cgroup">
+      <div class="cgroup-hd">${g.group}</div>
+      ${g.items.map(item=>{const ck=!!state.checklist.checked[item.id];return`
+        <div class="ci" onclick="toggleCheck('${item.id}')">
+          <div class="ci-box${ck?' on':''}"></div>
+          <div><div class="ci-lbl${ck?' done':''}">${item.label}</div><div class="ci-sub">${item.sub}</div></div>
+        </div>`;}).join('')}
+    </div>`).join('');
+  const now=new Date(),mn=new Date();mn.setHours(24,0,0,0);
+  const diff=mn-now,h=Math.floor(diff/3600000),m=Math.floor((diff%3600000)/60000);
+  document.getElementById('reset-note').textContent=`Auto-resets at midnight — ${h}h ${m}m from now`;
+}
+
+// ── ANALYTICS ─────────────────────────────────────────────────────────────
+const METRICS=['views','likes','comments','shares','followers_gained','followers_lost'];
+const METRIC_LABELS={views:'Views',likes:'Likes',comments:'Comments',shares:'Shares',followers_gained:'Followers +',followers_lost:'Followers -'};
+let curPlat='instagram';
+let chartTrends=null,chartEngage=null;
+
+function switchPlat(p,btn){
+  curPlat=p;
+  document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderAnalyticsMetrics();
+  renderCharts();
+  renderHistoryTable();
+  renderFormGrid();
+}
+
+function renderAnalyticsMetrics(){
+  const data=state.analytics[curPlat]||[];
+  const cur=data[data.length-1]||{};
+  const prev=data[data.length-2]||{};
+  document.getElementById('metric-grid').innerHTML=METRICS.map(k=>{
+    const v=cur[k]!==undefined?cur[k]:null;
+    const p=prev[k]!==undefined?prev[k]:null;
+    let delta='';
+    if(v!==null&&p!==null){const d=v-p;const cls=d>=0?'delta-up':'delta-dn';const arr=d>=0?'↑':'↓';delta=`<div class="mcard-delta ${cls}">${arr} ${Math.abs(d).toLocaleString()}</div>`;}
+    return`<div class="mcard"><div class="mcard-lbl">${METRIC_LABELS[k]}</div><div class="mcard-val">${v!==null?Number(v).toLocaleString():'—'}</div>${delta}</div>`;
+  }).join('');
+}
+
+function renderFormGrid(){
+  document.getElementById('form-grid').innerHTML=METRICS.map(k=>`
+    <div class="form-field">
+      <label>${METRIC_LABELS[k]}</label>
+      <input type="number" id="af-${k}" placeholder="0" min="0">
+    </div>`).join('');
+}
+
+function saveAnalytics(){
+  const entry={week:weekLabel(),date:new Date().toISOString()};
+  METRICS.forEach(k=>{const v=document.getElementById('af-'+k).value;entry[k]=v!==''?parseFloat(v):0;});
+  if(!state.analytics[curPlat])state.analytics[curPlat]=[];
+  state.analytics[curPlat].push(entry);
+  if(state.analytics[curPlat].length>12)state.analytics[curPlat]=state.analytics[curPlat].slice(-12);
+  saveState();
+  METRICS.forEach(k=>{const el=document.getElementById('af-'+k);if(el)el.value='';});
+  const c=document.getElementById('analytics-confirm');c.style.display='inline';setTimeout(()=>c.style.display='none',2000);
+  renderAnalyticsMetrics();renderCharts();renderHistoryTable();
+}
+
+function renderCharts(){
+  const data=state.analytics[curPlat]||[];
+  const labels=data.map(d=>d.week||'');
+  const col=curPlat==='instagram'?'#e1306c':'#1877f2';
+  const col2=curPlat==='instagram'?'rgba(225,48,108,.15)':'rgba(24,119,242,.15)';
+
+  // Follower trend chart
+  const fData=data.map(d=>(d.followers_gained||0)-(d.followers_lost||0));
+  const cumulative=[];let sum=0;fData.forEach(v=>{sum+=v;cumulative.push(sum);});
+  if(chartTrends){chartTrends.destroy();}
+  const ctx1=document.getElementById('chart-trends').getContext('2d');
+  chartTrends=new Chart(ctx1,{type:'line',data:{labels,datasets:[{label:'Net follower change',data:cumulative,borderColor:col,backgroundColor:col2,fill:true,tension:.4,pointRadius:4,pointBackgroundColor:col}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},title:{display:true,text:'Follower Growth (cumulative)',font:{size:12}}},scales:{y:{beginAtZero:false,grid:{color:'rgba(0,0,0,.05)'}},x:{grid:{display:false}}}}});
+
+  // Engagement chart
+  if(chartEngage){chartEngage.destroy();}
+  const ctx2=document.getElementById('chart-engage').getContext('2d');
+  chartEngage=new Chart(ctx2,{type:'bar',data:{labels,datasets:[
+    {label:'Views',data:data.map(d=>d.views||0),backgroundColor:'rgba(13,59,110,.7)'},
+    {label:'Likes',data:data.map(d=>d.likes||0),backgroundColor:'rgba(26,107,181,.7)'},
+    {label:'Comments',data:data.map(d=>d.comments||0),backgroundColor:'rgba(219,39,119,.7)'},
+    {label:'Shares',data:data.map(d=>d.shares||0),backgroundColor:'rgba(14,145,120,.7)'},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{title:{display:true,text:'Weekly Engagement',font:{size:12}}},scales:{x:{stacked:false,grid:{display:false}},y:{stacked:false,grid:{color:'rgba(0,0,0,.05)'}}}}});
+}
+
+function renderHistoryTable(){
+  const data=[...(state.analytics[curPlat]||[])].reverse();
+  if(!data.length){document.getElementById('history-table').innerHTML='<div class="empty-state">No data logged yet. Add your first week above.</div>';return;}
+  const rows=data.map(d=>`<tr><td style="padding:7px 10px;white-space:nowrap;font-weight:600">${d.week||''}</td>${METRICS.map(k=>`<td style="padding:7px 10px;text-align:right">${d[k]!==undefined?Number(d[k]).toLocaleString():'—'}</td>`).join('')}</tr>`).join('');
+  document.getElementById('history-table').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="border-bottom:2px solid #e0e3e8"><th style="padding:7px 10px;text-align:left;color:var(--muted);font-weight:700">Week</th>${METRICS.map(k=>`<th style="padding:7px 10px;text-align:right;color:var(--muted);font-weight:700">${METRIC_LABELS[k]}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`;
+}
+
+function initAnalytics(){renderAnalyticsMetrics();renderFormGrid();renderHistoryTable();}
+
+// ── GBP ───────────────────────────────────────────────────────────────────
+function toggleGBP(name,field){
+  if(!state.gbp[name])state.gbp[name]={claimed:false,verified:false,desc:false};
+  state.gbp[name][field]=!state.gbp[name][field];
+  saveState();renderGBP();
+}
+function renderGBP(){
+  if(!state.gbp)state.gbp={};
+  let done=0;
+  document.getElementById('gbp-grid').innerHTML=GBP_COMMUNITIES.map(name=>{
+    if(!state.gbp[name])state.gbp[name]={claimed:false,verified:false,desc:false};
+    const g=state.gbp[name];
+    const all=g.claimed&&g.verified&&g.desc;if(all)done++;
+    return`<div class="gbp-item${all?' done':''}">
+      <div class="gbp-dots">
+        <div class="gbp-dot${g.claimed?' claimed':''}" onclick="toggleGBP('${name}','claimed')" title="Claimed"></div>
+        <div class="gbp-dot${g.verified?' verified':''}" onclick="toggleGBP('${name}','verified')" title="Verified"></div>
+        <div class="gbp-dot${g.desc?' desc':''}" onclick="toggleGBP('${name}','desc')" title="Description written"></div>
+      </div>
+      <span class="gbp-name">${name}</span>
+    </div>`;
+  }).join('');
+  const pct=Math.round((done/GBP_COMMUNITIES.length)*100);
+  document.getElementById('gbp-fill').style.width=pct+'%';
+  document.getElementById('gbp-count').textContent=`${done} of ${GBP_COMMUNITIES.length} communities fully set up (${pct}%)`;
+}
+
+// ── ORG CHART ─────────────────────────────────────────────────────────────
+let orgCollapsed=new Set(['csm-east-group','csm-west-group','builders-group']);
+let orgSelected=null;
+
+function okids(id){return state.orgNodes.filter(n=>n.parent===id);}
+function gon(id){return state.orgNodes.find(n=>n.id===id);}
+
+function renderOrgTree(){
+  const roots=state.orgNodes.filter(n=>!n.parent);
+  document.getElementById('org-tree').innerHTML=roots.map(n=>renderOrgNode(n,0,true)).join('');
+}
+
+function renderOrgNode(node,depth,isLast){
+  const col=oc(node.dept);
+  const kids=okids(node.id);
+  const isCol=orgCollapsed.has(node.id);
+  const bg=hx(col,.07),border=hx(col,.25);
+  const sel=orgSelected===node.id;
+  let indent='';
+  if(depth>0){indent=`<div style="width:${depth*22}px;flex-shrink:0"></div>`;}
+  const card=`<div class="org-row" id="orgrow-${node.id}">
+    ${indent}
+    <div class="org-card" style="background:${bg};border-color:${border}${sel?`;box-shadow:0 0 0 2px ${col}`:''}" onclick="selectOrgNode('${node.id}')">
+      <div class="org-av" style="background:${col}">${ini(node.name)}</div>
+      <div class="org-info">
+        <div class="org-name">${node.name}</div>
+        <div class="org-role" style="color:${col}">${node.role}</div>
+      </div>
+      ${kids.length?`<button class="org-toggle" style="color:${col}" onclick="event.stopPropagation();toggleOrgNode('${node.id}')">${isCol?'▸ '+kids.length:'▾'}</button>`:''}
+    </div>
+  </div>`;
+  const childrenHtml=(!isCol&&kids.length)?kids.map((k,i)=>renderOrgNode(k,depth+1,i===kids.length-1)).join(''):'';
+  return`<div class="org-node">${card}${childrenHtml}</div>`;
+}
+
+function toggleOrgNode(id){if(orgCollapsed.has(id))orgCollapsed.delete(id);else orgCollapsed.add(id);renderOrgTree();}
+function expandAllOrg(){orgCollapsed.clear();renderOrgTree();}
+function collapseAllOrg(){state.orgNodes.forEach(n=>{if(okids(n.id).length)orgCollapsed.add(n.id);});renderOrgTree();}
+
+function selectOrgNode(id){
+  if(orgSelected===id){orgSelected=null;document.getElementById('org-detail').classList.remove('open');renderOrgTree();return;}
+  orgSelected=id;renderOrgTree();showOrgDetail(id);
+}
+
+function showOrgDetail(id){
+  const n=gon(id);if(!n)return;
+  const col=oc(n.dept);
+  const parent=n.parent?gon(n.parent):null;
+  const kids=okids(id);
+  const dp=document.getElementById('org-detail');
+  dp.innerHTML=`<div class="od-head">
+    <div class="od-av" style="background:${col}">${ini(n.name)}</div>
+    <div style="flex:1">
+      <div class="od-name">${n.name}</div>
+      <div class="od-role">${n.role}</div>
+      <span class="od-badge" style="background:${hx(col,.12)};color:${col}">${ORG_DL[n.dept]||n.dept}</span>
+    </div>
+    <div class="od-acts">
+      <button class="od-btn" onclick="openOrgEdit('${id}')">✎ Edit</button>
+      <button class="od-btn" onclick="openAddOrgPerson('${id}')">+ Add report</button>
+      <button class="od-btn del" onclick="delOrgNode('${id}')">✕ Remove</button>
+    </div>
+  </div>
+  <div style="margin-bottom:.5rem">
+    ${n.cell?`<span class="ctag">📞 <a href="tel:${n.cell}" style="color:${col}">${n.cell}</a></span>`:''}
+    ${n.email?`<span class="ctag">✉ <a href="mailto:${n.email}" style="color:${col}">${n.email}</a></span>`:''}
+    ${!n.cell&&!n.email?`<span style="font-size:11px;color:var(--muted)">No contact info on file</span>`:''}
+  </div>
+  ${n.note?`<div style="font-size:12px;color:var(--muted);background:var(--light);padding:7px 10px;border-radius:7px;margin-bottom:.5rem">${n.note}</div>`:''}
+  <div style="font-size:12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+    <span style="color:var(--muted);font-weight:700;font-size:11px">Reports to:</span>
+    ${parent?`<span style="padding:2px 9px;border-radius:20px;background:${hx(oc(parent.dept),.1)};color:${oc(parent.dept)};font-size:11px;font-weight:700;cursor:pointer" onclick="selectOrgNode('${parent.id}')">${parent.name}</span>`:'<span style="font-size:11px;color:var(--muted)">Top of org</span>'}
+    ${kids.length?`<span style="color:var(--muted);font-weight:700;font-size:11px;margin-left:6px">Direct reports:</span>${kids.map(k=>`<span style="padding:2px 9px;border-radius:20px;background:${hx(oc(k.dept),.1)};color:${oc(k.dept)};font-size:11px;font-weight:700;cursor:pointer" onclick="selectOrgNode('${k.id}')">${k.name.split(' ')[0]}</span>`).join('')}`:''}
+  </div>`;
+  dp.classList.add('open');
+}
+
+function openOrgEdit(id){
+  const n=gon(id);if(!n)return;
+  const others=state.orgNodes.filter(x=>x.id!==id);
+  document.getElementById('modal-body').innerHTML=`
+    <div class="mt">Edit — ${n.name}</div>
+    <div class="fl">Name*</div><input class="fi" id="en" value="${n.name}">
+    <div class="fl">Title / Role</div><input class="fi" id="er" value="${n.role}">
+    <div class="frow"><div><div class="fl">Cell</div><input class="fi" id="ec2" value="${n.cell||''}"></div><div><div class="fl">Email</div><input class="fi" id="ee" value="${n.email||''}"></div></div>
+    <div class="fl">Department</div><select class="fi" id="ed">${Object.entries(ORG_DL).map(([k,v])=>`<option value="${k}"${n.dept===k?' selected':''}>${v}</option>`).join('')}</select>
+    <div class="fl">Reports to</div><select class="fi" id="ert"><option value="">— Top level —</option>${others.map(x=>`<option value="${x.id}"${n.parent===x.id?' selected':''}>${x.name} · ${x.role}</option>`).join('')}</select>
+    <div class="fl">Notes</div><textarea class="fi" id="eno" style="min-height:50px;resize:vertical">${n.note||''}</textarea>
+    <br><button class="bs" onclick="saveOrgEdit('${id}')">Save</button><button class="bc" onclick="closeModal()">Cancel</button>`;
+  openModal();
+}
+function saveOrgEdit(id){
+  const n=gon(id);if(!n)return;
+  n.name=document.getElementById('en').value.trim()||n.name;
+  n.role=document.getElementById('er').value.trim();
+  n.cell=document.getElementById('ec2').value.trim();
+  n.email=document.getElementById('ee').value.trim();
+  n.dept=document.getElementById('ed').value;
+  n.parent=document.getElementById('ert').value||null;
+  n.note=document.getElementById('eno').value.trim();
+  saveState();closeModal();renderOrgTree();if(orgSelected===id)showOrgDetail(id);
+}
+function delOrgNode(id){
+  const n=gon(id);if(!n)return;
+  const ch=okids(id);
+  if(!confirm(ch.length?`Delete ${n.name}? Their ${ch.length} report(s) will move up.`:`Remove ${n.name}?`))return;
+  ch.forEach(c=>c.parent=n.parent);
+  state.orgNodes=state.orgNodes.filter(x=>x.id!==id);
+  if(orgSelected===id){orgSelected=null;document.getElementById('org-detail').classList.remove('open');}
+  saveState();renderOrgTree();
+}
+function openAddOrgPerson(preParent){
+  document.getElementById('modal-body').innerHTML=`
+    <div class="mt">Add Person to Org Chart</div>
+    <div class="fl">Name*</div><input class="fi" id="an" placeholder="Jane Smith">
+    <div class="fl">Title / Role</div><input class="fi" id="ar" placeholder="Community Sales Manager">
+    <div class="frow"><div><div class="fl">Cell</div><input class="fi" id="ac3"></div><div><div class="fl">Email</div><input class="fi" id="ae2"></div></div>
+    <div class="fl">Department</div><select class="fi" id="adept">${Object.entries(ORG_DL).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>
+    <div class="fl">Reports to</div><select class="fi" id="ap"><option value="">— Top level —</option>${state.orgNodes.map(x=>`<option value="${x.id}"${preParent===x.id?' selected':''}>${x.name} · ${x.role}</option>`).join('')}</select>
+    <div class="fl">Notes</div><input class="fi" id="ano" placeholder="Communities, days off, assistant…">
+    <br><button class="bs" onclick="submitOrgAdd()">Add</button><button class="bc" onclick="closeModal()">Cancel</button>`;
+  openModal();
+}
+function submitOrgAdd(){
+  const name=document.getElementById('an').value.trim();if(!name)return;
+  state.orgNodes.push({id:'p'+Date.now(),parent:document.getElementById('ap').value||null,dept:document.getElementById('adept').value,name,role:document.getElementById('ar').value.trim(),cell:document.getElementById('ac3').value.trim(),email:document.getElementById('ae2').value.trim(),note:document.getElementById('ano').value.trim()});
+  saveState();closeModal();renderOrgTree();
+}
+
+// ── CONTACTS ──────────────────────────────────────────────────────────────
+let contactSearch='',contactPri='all';
+function filterContacts(v){contactSearch=v.toLowerCase();renderContacts();}
+function setPriFilter(btn,p){
+  contactPri=p;
+  document.querySelectorAll('[data-pf]').forEach(b=>{b.classList.remove('on');b.style.cssText='';});
+  btn.classList.add('on');btn.style.background='var(--navy)';btn.style.borderColor='var(--navy)';btn.style.color='#fff';
+  renderContacts();
+}
+function renderContacts(){
+  let filtered=state.contacts||[];
+  if(contactSearch)filtered=filtered.filter(c=>(c.company+' '+c.contactName+' '+c.role).toLowerCase().includes(contactSearch));
+  if(contactPri!=='all')filtered=filtered.filter(c=>c.priority===contactPri);
+  const grid=document.getElementById('contact-grid');
+  if(!filtered.length){grid.innerHTML=`<div class="empty-state" style="grid-column:1/-1">${state.contacts.length?'No contacts match your filter.':'No contacts yet. Add your first outsourced contact above.'}</div>`;return;}
+  const priBadge=p=>p==='High'?'<span class="pri-badge pri-high">High Priority</span>':p==='Medium'?'<span class="pri-badge pri-med">Medium</span>':'<span class="pri-badge pri-low">Low</span>';
+  grid.innerHTML=filtered.map(c=>`
+    <div class="contact-card">
+      <div class="cc-top">
+        <div><div class="cc-company">${c.company}</div><div class="cc-role">${c.role||''}</div></div>
+        ${priBadge(c.priority||'Medium')}
+      </div>
+      ${c.contactName?`<div class="cc-contact">👤 ${c.contactName}</div>`:''}
+      <div class="cc-info">
+        ${c.phone?`<span>📞 <a href="tel:${c.phone}">${c.phone}</a></span>`:''}
+        ${c.email?`<span>✉ <a href="mailto:${c.email}">${c.email}</a></span>`:''}
+      </div>
+      ${c.notes?`<div class="cc-notes">${c.notes}</div>`:''}
+      <div class="cc-actions">
+        <button class="cc-btn" onclick="openEditContact('${c.id}')">✎ Edit</button>
+        <button class="cc-btn del" onclick="deleteContact('${c.id}')">✕ Remove</button>
+      </div>
+    </div>`).join('');
+}
+function openAddContact(){
+  document.getElementById('modal-body').innerHTML=`
+    <div class="mt">Add Outsourced Contact</div>
+    <div class="fl">Company Name*</div><input class="fi" id="cc-co" placeholder="e.g. Signco, PhotoStudio">
+    <div class="fl">What they do*</div><input class="fi" id="cc-role" placeholder="e.g. Signage printing, Photography">
+    <div class="fl">Contact Name</div><input class="fi" id="cc-name" placeholder="Primary contact">
+    <div class="frow"><div><div class="fl">Phone</div><input class="fi" id="cc-ph"></div><div><div class="fl">Email</div><input class="fi" id="cc-em"></div></div>
+    <div class="fl">Priority</div><select class="fi" id="cc-pri"><option>High</option><option selected>Medium</option><option>Low</option></select>
+    <div class="fl">Notes</div><textarea class="fi" id="cc-notes" style="min-height:50px;resize:vertical" placeholder="Turnaround time, account number, anything useful…"></textarea>
+    <br><button class="bs" onclick="submitContact()">Add Contact</button><button class="bc" onclick="closeModal()">Cancel</button>`;
+  openModal();
+}
+function submitContact(){
+  const co=document.getElementById('cc-co').value.trim();if(!co)return;
+  if(!state.contacts)state.contacts=[];
+  state.contacts.push({id:'c'+Date.now(),company:co,role:document.getElementById('cc-role').value.trim(),contactName:document.getElementById('cc-name').value.trim(),phone:document.getElementById('cc-ph').value.trim(),email:document.getElementById('cc-em').value.trim(),priority:document.getElementById('cc-pri').value,notes:document.getElementById('cc-notes').value.trim()});
+  saveState();closeModal();renderContacts();
+}
+function openEditContact(id){
+  const c=state.contacts.find(x=>x.id===id);if(!c)return;
+  document.getElementById('modal-body').innerHTML=`
+    <div class="mt">Edit Contact</div>
+    <div class="fl">Company Name*</div><input class="fi" id="ec-co" value="${c.company}">
+    <div class="fl">What they do</div><input class="fi" id="ec-role" value="${c.role||''}">
+    <div class="fl">Contact Name</div><input class="fi" id="ec-name" value="${c.contactName||''}">
+    <div class="frow"><div><div class="fl">Phone</div><input class="fi" id="ec-ph" value="${c.phone||''}"></div><div><div class="fl">Email</div><input class="fi" id="ec-em" value="${c.email||''}"></div></div>
+    <div class="fl">Priority</div><select class="fi" id="ec-pri"><option${c.priority==='High'?' selected':''}>High</option><option${c.priority==='Medium'?' selected':''}>Medium</option><option${c.priority==='Low'?' selected':''}>Low</option></select>
+    <div class="fl">Notes</div><textarea class="fi" id="ec-notes" style="min-height:50px;resize:vertical">${c.notes||''}</textarea>
+    <br><button class="bs" onclick="saveContact('${id}')">Save</button><button class="bc" onclick="closeModal()">Cancel</button>`;
+  openModal();
+}
+function saveContact(id){
+  const c=state.contacts.find(x=>x.id===id);if(!c)return;
+  c.company=document.getElementById('ec-co').value.trim()||c.company;
+  c.role=document.getElementById('ec-role').value.trim();
+  c.contactName=document.getElementById('ec-name').value.trim();
+  c.phone=document.getElementById('ec-ph').value.trim();
+  c.email=document.getElementById('ec-em').value.trim();
+  c.priority=document.getElementById('ec-pri').value;
+  c.notes=document.getElementById('ec-notes').value.trim();
+  saveState();closeModal();renderContacts();
+}
+function deleteContact(id){if(!confirm('Remove this contact?'))return;state.contacts=state.contacts.filter(x=>x.id!==id);saveState();renderContacts();}
+
+// ── COMMUNITIES ───────────────────────────────────────────────────────────
+function getDefaultComms(){
+  return[
+    {id:'aero-vista',name:'Aero Vista',city:'Caddo Mills',mgr:'amanda',area:'Hector Hernandez',csms:[{name:'Thurston Johnson',cell:'214-682-4960',email:'tjohnson@rshomebuilders.com',daysOff:'Mon/Tue'}],builders:[{name:'Blake Kohut',cell:'214-532-1528',email:''}],meeting:{day:'—',time:'—'},notes:''},
+    {id:'cedar-ridge',name:'Cedar Ridge',city:'Anna',mgr:'amanda',area:'Hector Hernandez',csms:[{name:'Finnye Shipley',cell:'214-532-8583',email:'finnye.shipley@rshomebuilders.com',daysOff:'Wed/Thurs'},{name:'Tori Smith',cell:'214-733-7492',email:'tori.smith@rshomebuilders.com',daysOff:'Mon/Tue'}],builders:[{name:'Brandon Graf',cell:'469-723-8060',email:''}],meeting:{day:'—',time:'—'},notes:''},
+    {id:'colina-creek',name:'Colina Creek',city:'Farmersville',mgr:'amanda',area:'Hector Hernandez',csms:[],builders:[{name:'Zach Hill',cell:'469-265-9782',email:''}],meeting:{day:'—',time:'—'},notes:''},
+    {id:'covenant-park',name:'Covenant Park',city:'Springtown',mgr:'dominic',area:'Robert Alexander',csms:[{name:'Magan Elkins',cell:'817-501-2036',email:'magan.elkins@rshomebuilders.com',daysOff:'Mon/Tue'}],builders:[{name:'Chris Bane',cell:'817-994-1304',email:''}],meeting:{day:'Thurs',time:'9am'},notes:''},
+    {id:'covenant-springs',name:'Covenant Springs',city:'Springtown',mgr:'dominic',area:'Robert Alexander',csms:[{name:'Magan Elkins',cell:'817-501-2036',email:'magan.elkins@rshomebuilders.com',daysOff:'Mon/Tue'}],builders:[{name:'Chris Bane',cell:'817-994-1304',email:''}],meeting:{day:'Thurs',time:'9am'},notes:''},
+    {id:'creekview',name:'Creekview',city:'Van Alstyne',mgr:'amanda',area:'Hector Hernandez',csms:[{name:'Kyle Powell',cell:'469-671-8759',email:'kpowell@rshomebuilders.com',daysOff:'Wed/Thurs'}],builders:[{name:'Gilberto Gonzales',cell:'214-558-3661',email:''}],meeting:{day:'—',time:'—'},notes:''},
+    {id:'eagle-ridge',name:'Eagle Ridge',city:'Weatherford',mgr:'dominic',area:'Robert Alexander',csms:[{name:'Nikki Lytle',cell:'469-400-5326',email:'nikki.lytle@rshomebuilders.com',daysOff:'Thur/Fri'}],builders:[{name:'Dylan Cutler',cell:'817-487-5757',email:''}],meeting:{day:'Tue',time:'1pm'},notes:''},
+    {id:'fairview-meadows',name:'Fairview Meadows',city:'New Fairview',mgr:'dominic',area:'Wade Wiese',csms:[{name:'Jim Gordy',cell:'817-938-2860',email:'jim.gordy@rshomebuilders.com',daysOff:'Mon/Tue'},{name:'Karolyn Shelton',cell:'817-718-7122',email:'kshelton@rshomebuilders.com',daysOff:'Wed/Thur'}],builders:[{name:'Brady LeBeau',cell:'817-913-5430',email:''},{name:'Shawn Merchant',cell:'214-529-2406',email:''}],meeting:{day:'Thurs',time:'10am'},notes:''},
+    {id:'fannin-ranch',name:'Fannin Ranch',city:'Anna',mgr:'amanda',area:'Hector Hernandez',csms:[{name:'Kevin Jones',cell:'972-834-0225',email:'kjones@rshomebuilders.com',daysOff:'Wed/Thurs'}],builders:[{name:'Hulon Binkley',cell:'214-471-3737',email:''}],meeting:{day:'Fri',time:'9am'},notes:''},
+    {id:'grayson-ridge',name:'Grayson Ridge',city:'Van Alstyne',mgr:'amanda',area:'Hector Hernandez',csms:[{name:'Ashley Bell',cell:'469-734-6686',email:'abell@rshomebuilders.com',daysOff:'Thur/Fri'}],builders:[{name:'Hulon Binkley',cell:'214-471-3737',email:''}],meeting:{day:'Mon',time:'10am'},notes:''},
+    {id:'hillcrest-meadows',name:'Hillcrest Meadows',city:'Decatur',mgr:'dominic',area:'Wade Wiese',csms:[{name:'Bryan Shaffer',cell:'940-531-8726',email:'bryan.shaffer@rshomebuilders.com',daysOff:'Thur/Fri'}],builders:[{name:'Toby Gray',cell:'682-803-4483',email:''}],meeting:{day:'Wed',time:'10am'},notes:''},
+    {id:'hillview-addition',name:'Hillview Addition',city:'Decatur',mgr:'dominic',area:'Wade Wiese',csms:[{name:'Bryan Shaffer',cell:'940-531-8726',email:'bryan.shaffer@rshomebuilders.com',daysOff:'Thur/Fri'}],builders:[{name:'Toby Gray',cell:'682-803-4483',email:''}],meeting:{day:'Wed',time:'10am'},notes:''},
+    {id:'king-crossing',name:'King Crossing',city:'Van Alstyne',mgr:'amanda',area:'Hector Hernandez',csms:[{name:'Jamie Miller',cell:'817-505-6886',email:'jamie.miller@rshomebuilders.com',daysOff:'Thur/Fri'}],builders:[{name:'Josh Rumbaugh',cell:'469-588-1632',email:''}],meeting:{day:'Mon',time:'11am'},notes:''},
+    {id:'liberty-pointe',name:'Liberty Pointe',city:'Gainesville',mgr:'dominic',area:'Wade Wiese',csms:[{name:'Sylvia Carpio',cell:'940-300-6188',email:'scarpio@rshomebuilders.com',daysOff:'Thur/Fri'}],builders:[{name:'Rick LeBeau',cell:'817-913-1119',email:''}],meeting:{day:'Wed',time:'11am'},notes:''},
+    {id:'magnolia-west',name:'Magnolia West',city:'Westworth Village',mgr:'dominic',area:'Robert Alexander',csms:[{name:'Graeme Robertson',cell:'817-437-5793',email:'graeme.robertson@rshomebuilders.com',daysOff:'Wed/Thur'}],builders:[{name:'Robert Alexander',cell:'817-773-3736',email:''}],meeting:{day:'Wed',time:'10am'},notes:''},
+    {id:'morningstar',name:'Morningstar',city:'Weatherford',mgr:'dominic',area:'Robert Alexander',csms:[{name:'Steve Woodall',cell:'817-800-0058',email:'steve.woodall@rshomebuilders.com',daysOff:'Mon/Tue'}],builders:[{name:'Jordan Beisner',cell:'817-676-2693',email:''}],meeting:{day:'Fri',time:'10am'},notes:''},
+    {id:'nash-estates',name:'Nash Estates',city:'Tom Bean',mgr:'amanda',area:'Hector Hernandez',csms:[{name:'Kevin Jones',cell:'972-834-0225',email:'kjones@rshomebuilders.com',daysOff:'Wed/Thurs'}],builders:[{name:'Chris Shipley',cell:'214-794-6308',email:''}],meeting:{day:'Fri',time:'10:30am'},notes:''},
+    {id:'northstar',name:'Northstar',city:'Fort Worth',mgr:'dominic',area:'Wade Wiese',csms:[{name:'Arliah Perez',cell:'682-283-2512',email:'arliah.perez@rshomebuilders.com',daysOff:'Wed/Thur'}],builders:[{name:'Collyn Shipley',cell:'469-474-5117',email:''}],meeting:{day:'Wed',time:'11am'},notes:''},
+    {id:'oak-grove',name:'Oak Grove Addition',city:'Springtown',mgr:'dominic',area:'Robert Alexander',csms:[{name:'Shavonne Lamb',cell:'682-401-2494',email:'smartin@rshomebuilders.com',daysOff:'Thur/Fri'}],builders:[{name:'Troy Carlisle',cell:'817-776-1634',email:''}],meeting:{day:'Tues',time:'1pm'},notes:''},
+    {id:'oak-valley',name:'Oak Valley',city:'Terrell',mgr:'amanda',area:'Hector Hernandez',csms:[{name:'Thurston Johnson',cell:'214-682-4960',email:'tjohnson@rshomebuilders.com',daysOff:'Mon/Tue'}],builders:[{name:'Jose Ramirez',cell:'214-476-4527',email:''},{name:'Chris Duckworth',cell:'469-866-9690',email:''}],meeting:{day:'—',time:'—'},notes:''},
+    {id:'parker-heights',name:'Parker Heights',city:'Valley View',mgr:'dominic',area:'Wade Wiese',csms:[{name:'Valerie Martinez',cell:'817-627-8445',email:'valerie.martinez@rshomebuilders.com',daysOff:'Thur/Fri'}],builders:[{name:'Charles Fuller',cell:'817-659-9009',email:''}],meeting:{day:'Wed',time:'11:30am'},notes:''},
+    {id:'raintree',name:'Raintree',city:'Princeton',mgr:'amanda',area:'Hector Hernandez',csms:[{name:'Jamie Miller',cell:'817-505-6886',email:'jamie.miller@rshomebuilders.com',daysOff:'Thur/Fri'}],builders:[{name:'Jose Ramirez',cell:'214-476-4527',email:''}],meeting:{day:'Mon',time:'11am'},notes:''},
+    {id:'rocky-top',name:'Rocky Top',city:'Krum',mgr:'dominic',area:'Wade Wiese',csms:[{name:'Cami Hoppe',cell:'817-721-8517',email:'cami.hoppe@rshomebuilders.com',daysOff:'Thur/Fri'},{name:'Christy Hodge',cell:'817-253-6652',email:'chodge@rshomebuilders.com',daysOff:'Tues/Weds'}],builders:[{name:'Jared Goff',cell:'469-496-1841',email:''}],meeting:{day:'Mon',time:'11am'},notes:''},
+    {id:'saddle-brook',name:'Saddle Brook',city:'Van Alstyne',mgr:'amanda',area:'Hector Hernandez',csms:[{name:'Kyle Powell',cell:'469-671-8759',email:'kpowell@rshomebuilders.com',daysOff:'Wed/Thurs'}],builders:[{name:'Gilberto Gonzales',cell:'214-558-3661',email:''}],meeting:{day:'—',time:'—'},notes:''},
+    {id:'terra-escalante',name:'Terra Escalante',city:'Blue Ridge',mgr:'amanda',area:'Hector Hernandez',csms:[{name:'Desiree Baca',cell:'505-379-2842',email:'desiree.baca@rshomebuilders.com',daysOff:'Tue/Wed'}],builders:[{name:'Dale Perot',cell:'972-768-2046',email:''}],meeting:{day:'Thurs',time:'1pm'},notes:''},
+    {id:'the-hollow',name:'The Hollow',city:'Ennis',mgr:'amanda',area:'Hector Hernandez',csms:[{name:'Thurston Johnson',cell:'214-682-4960',email:'tjohnson@rshomebuilders.com',daysOff:'Mon/Tue'}],builders:[{name:'Chris Shipley',cell:'214-794-6308',email:''}],meeting:{day:'Wed',time:'12pm'},notes:''},
+    {id:'vista-oaks',name:'Vista Oaks',city:'Royse City',mgr:'amanda',area:'Hector Hernandez',csms:[{name:'Thurston Johnson',cell:'214-682-4960',email:'tjohnson@rshomebuilders.com',daysOff:'Mon/Tue'}],builders:[{name:'Dale Perot',cell:'972-768-2046',email:''}],meeting:{day:'Wed',time:'12pm'},notes:''},
+    {id:'waterford',name:'Waterford',city:'Azle',mgr:'dominic',area:'Robert Alexander',csms:[{name:'Bobbie Johnson',cell:'214-734-8582',email:'bobbie.johnson@rshomebuilders.com',daysOff:'Thur/Fri'}],builders:[{name:'Dylan Cutler',cell:'817-487-5757',email:''}],meeting:{day:'Wed',time:'10:30am'},notes:''},
+    {id:'westpoint-park',name:'Westpoint Park',city:'Fort Worth / Westworth Village',mgr:'dominic',area:'Robert Alexander',csms:[{name:'Graeme Robertson',cell:'817-437-5793',email:'graeme.robertson@rshomebuilders.com',daysOff:'Wed/Thur'}],builders:[{name:'Paige Cain',cell:'817-676-2693',email:''},{name:'Robert Alexander',cell:'817-773-3736',email:''}],meeting:{day:'Wed',time:'10am'},notes:''},
+  ];
+}
+
+let activeFilter='all',activeSearch='';
+function renderComms(){
+  const sorted=[...state.communities].sort((a,b)=>a.name.localeCompare(b.name));
+  document.getElementById('comm-grid').innerHTML=sorted.map(c=>{
+    const col=MGR_COLOR[c.mgr]||'#888';
+    const csmNames=c.csms.map(s=>s.name.split(' ')[0]).join(' & ')||'—';
+    const bldNames=c.builders.map(b=>b.name.split(' ')[0]).join(' & ')||'—';
+    const mgrLabel=c.mgr==='amanda'?'Amanda (East)':c.mgr==='dominic'?'Dominic (West)':c.area;
+    return`<div class="ccard" data-id="${c.id}" data-mgr="${c.mgr}" data-search="${(c.name+' '+c.city+' '+c.area+' '+csmNames+' '+bldNames).toLowerCase()}" style="background:${hx(col,.07)};border-color:${hx(col,.3)}" onclick="openCommModal('${c.id}')">
+      <div class="ccard-stripe" style="background:${col}"></div>
+      <div class="ccard-name" style="color:${col}">${c.name}</div>
+      <div class="ccard-city" style="color:${col};opacity:.75">📍 ${c.city}</div>
+      <div class="ccard-row"><span class="ck">CSM</span><span class="cv">${csmNames}</span></div>
+      <div class="ccard-row"><span class="ck">Builder</span><span class="cv">${bldNames}</span></div>
+      ${c.meeting.day!=='—'?`<div class="ccard-row"><span class="ck">Mtg</span><span class="cv" style="color:${dayColor[c.meeting.day]||col}">${c.meeting.day} ${c.meeting.time}</span></div>`:''}
+      <div class="mgr-lbl" style="background:${hx(col,.15)};color:${col}">${mgrLabel}</div>
+    </div>`;
+  }).join('');
+  applyFilter();saveState();
+}
+function applyFilter(){
+  document.querySelectorAll('#comm-grid .ccard').forEach(el=>{
+    el.style.display=(activeFilter==='all'||el.dataset.mgr===activeFilter)&&(!activeSearch||el.dataset.search.includes(activeSearch))?'':'none';
+  });
+}
+function filterComms(v){activeSearch=v.toLowerCase();applyFilter();}
+function setFilter(btn,f){
+  activeFilter=f;
+  document.querySelectorAll('.fbtn').forEach(b=>{b.classList.remove('on');b.style.cssText='';});
+  btn.classList.add('on');
+  const col=f==='amanda'?'#0e9178':f==='dominic'?'#7c3aed':'#0d3b6e';
+  btn.style.background=col;btn.style.borderColor=col;btn.style.color='#fff';
+  applyFilter();
+}
+function openCommModal(id){
+  const c=state.communities.find(x=>x.id===id);if(!c)return;
+  const col=MGR_COLOR[c.mgr]||'#888';
+  document.getElementById('modal-body').innerHTML=`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;padding-bottom:.9rem;border-bottom:2px solid ${col}">
+      <div style="width:44px;height:44px;border-radius:10px;background:${col};display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;flex-shrink:0">🏘</div>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:800">${c.name}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">📍 ${c.city}</div>
+      </div>
+      <button class="row-btn" onclick="openEditComm('${id}')">✎ Edit</button>
+    </div>
+    ${c.meeting.day!=='—'?`<div style="margin-bottom:.75rem;font-size:12px">Meeting: <strong style="color:${dayColor[c.meeting.day]||col}">${c.meeting.day}</strong> at <strong>${c.meeting.time}</strong></div>`:''}
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px">CSMs</div>
+    ${c.csms.map(s=>`<div style="padding:8px 10px;background:var(--light);border-radius:8px;margin-bottom:5px;font-size:12px"><strong>${s.name}</strong> · Off: ${s.daysOff||'—'}<br>${s.cell?`📞 <a href="tel:${s.cell}" style="color:${col}">${s.cell}</a>  `:''}${s.email?`✉ <a href="mailto:${s.email}" style="color:${col}">${s.email}</a>`:''}</div>`).join('')||'<div style="color:var(--muted);font-size:12px">None on file</div>'}
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin:.75rem 0 6px">Builders</div>
+    ${c.builders.map(b=>`<div style="padding:8px 10px;background:var(--light);border-radius:8px;margin-bottom:5px;font-size:12px"><strong>${b.name}</strong>${b.cell?` · <a href="tel:${b.cell}" style="color:${col}">${b.cell}</a>`:''}</div>`).join('')||'<div style="color:var(--muted);font-size:12px">None on file</div>'}
+    ${c.notes?`<div style="margin-top:.75rem;font-size:12px;color:var(--muted);background:var(--light);padding:8px 10px;border-radius:8px">${c.notes}</div>`:''}`;
+  openModal();
+}
+function openEditComm(id){
+  const c=state.communities.find(x=>x.id===id);if(!c)return;
+  document.getElementById('modal-body').innerHTML=`
+    <div class="mt">Edit Community</div>
+    <div class="fl">Name*</div><input class="fi" id="ecn" value="${c.name}">
+    <div class="fl">City</div><input class="fi" id="ecc" value="${c.city}">
+    <div class="frow"><div><div class="fl">Sales Manager</div><select class="fi" id="ecm"><option value="amanda"${c.mgr==='amanda'?' selected':''}>Amanda (East)</option><option value="dominic"${c.mgr==='dominic'?' selected':''}>Dominic (West)</option></select></div><div><div class="fl">Area Manager</div><select class="fi" id="eca"><option${c.area==='Hector Hernandez'?' selected':''}>Hector Hernandez</option><option${c.area==='Robert Alexander'?' selected':''}>Robert Alexander</option><option${c.area==='Wade Wiese'?' selected':''}>Wade Wiese</option><option${c.area==='Dean Davis'?' selected':''}>Dean Davis</option></select></div></div>
+    <div class="frow"><div><div class="fl">Meeting Day</div><input class="fi" id="ecmd" value="${c.meeting.day}"></div><div><div class="fl">Meeting Time</div><input class="fi" id="ecmt" value="${c.meeting.time}"></div></div>
+    <br><button class="bs" onclick="saveEditComm('${id}')">Save</button><button class="bc" onclick="openCommModal('${id}')">Cancel</button>`;
+}
+function saveEditComm(id){
+  const c=state.communities.find(x=>x.id===id);if(!c)return;
+  c.name=document.getElementById('ecn').value.trim()||c.name;
+  c.city=document.getElementById('ecc').value.trim();
+  c.mgr=document.getElementById('ecm').value;
+  c.area=document.getElementById('eca').value;
+  c.meeting.day=document.getElementById('ecmd').value.trim();
+  c.meeting.time=document.getElementById('ecmt').value.trim();
+  saveState();renderComms();closeModal();
+}
+function openAddComm(){
+  document.getElementById('modal-body').innerHTML=`
+    <div class="mt">Add New Community</div>
+    <div class="fl">Name*</div><input class="fi" id="ncn" placeholder="Community name">
+    <div class="fl">City</div><input class="fi" id="ncc" placeholder="City, TX">
+    <div class="frow"><div><div class="fl">Sales Manager</div><select class="fi" id="ncm"><option value="amanda">Amanda (East)</option><option value="dominic">Dominic (West)</option></select></div><div><div class="fl">Area Manager</div><select class="fi" id="nca"><option>Hector Hernandez</option><option>Robert Alexander</option><option>Wade Wiese</option><option>Dean Davis</option></select></div></div>
+    <br><button class="bs" onclick="submitNewComm()">Add Community</button><button class="bc" onclick="closeModal()">Cancel</button>`;
+  openModal();
+}
+function submitNewComm(){
+  const name=document.getElementById('ncn').value.trim();if(!name)return;
+  const id=name.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'')+'-'+Date.now();
+  state.communities.push({id,name,city:document.getElementById('ncc').value.trim(),mgr:document.getElementById('ncm').value,area:document.getElementById('nca').value,csms:[],builders:[],meeting:{day:'—',time:'—'},notes:''});
+  saveState();renderComms();closeModal();
+}
+
+// ── CONSTRUCTION ──────────────────────────────────────────────────────────
+function renderConst(){
+  document.getElementById('const-content').innerHTML=state.constGroups.map(g=>`
+    <div style="margin-bottom:1.4rem">
+      <div class="am-header" style="background:${g.color}">
+        <div style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:13px;flex-shrink:0">${ini(g.mgr)}</div>
+        <div><div class="am-name">${g.mgr} — Area Manager</div><div class="am-sub">${g.cell}</div></div>
+        <div class="am-cities">${g.cities}</div>
+      </div>
+      <div class="builder-grid">
+        ${g.builders.map((b,bi)=>`<div class="b-card">
+          <div class="row-btns"><button class="row-btn del" onclick="deleteBuilder('${g.mgr}',${bi})">✕</button></div>
+          <div class="b-name">${b.name}</div><div class="b-comm" style="color:${g.color}">${b.comm}</div>
+          <div class="b-city">📍 ${b.city}</div>
+          <div class="b-phone"><a href="tel:${b.cell}" style="color:${g.color}">${b.cell}</a></div>
+        </div>`).join('')}
+        <div style="border:1.5px dashed #d0d4da;border-radius:9px;display:flex;align-items:center;justify-content:center;min-height:85px;cursor:pointer;font-size:12px;font-weight:700;color:${g.color};background:#fff" onclick="openAddBuilder('${g.mgr}')">+ Add Builder</div>
+      </div>
+    </div>`).join('');
+  saveState();
+}
+function deleteBuilder(mgrName,bi){if(!confirm('Remove builder?'))return;const g=state.constGroups.find(x=>x.mgr===mgrName);if(!g)return;g.builders.splice(bi,1);renderConst();}
+function openAddBuilder(mgrName){
+  document.getElementById('modal-body').innerHTML=`
+    <div class="mt">Add Builder — ${mgrName}</div>
+    <div class="fl">Name*</div><input class="fi" id="abn">
+    <div class="fl">Communities</div><input class="fi" id="abco" placeholder="Community / Community">
+    <div class="frow"><div><div class="fl">City</div><input class="fi" id="abci"></div><div><div class="fl">Cell</div><input class="fi" id="abce"></div></div>
+    <br><button class="bs" onclick="submitAddBuilder('${mgrName}')">Add</button><button class="bc" onclick="closeModal()">Cancel</button>`;
+  openModal();
+}
+function submitAddBuilder(mgrName){
+  const name=document.getElementById('abn').value.trim();if(!name)return;
+  const g=state.constGroups.find(x=>x.mgr===mgrName);if(!g)return;
+  g.builders.push({name,comm:document.getElementById('abco').value.trim(),city:document.getElementById('abci').value.trim(),cell:document.getElementById('abce').value.trim()});
+  renderConst();closeModal();
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────────
+function openModal(){document.getElementById('overlay').classList.add('open');}
+function closeModal(){document.getElementById('overlay').classList.remove('open');}
+function maybeClose(e){if(e.target===document.getElementById('overlay'))closeModal();}
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+loadState();
+initHome();
+initChecklist();
+initAnalytics();
+renderGBP();
+renderContacts();
+showWelcome();
+setInterval(updateClock,1000);
+setInterval(renderChecklist,60000);
+updateClock();
+
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js').catch(()=>{});}
+</script>
+</body>
+</html>
