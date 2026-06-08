@@ -11,6 +11,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="module">
+  import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs";
+  pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs";
+  window.pdfjsLib=pdfjsLib;            // expose to the main (classic) script
+  window.dispatchEvent(new Event("pdfjs-ready"));
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -296,6 +302,23 @@ html,body{font-family:var(--font-body);font-size:13px;background:var(--bg);color
 .ss-status.loading{background:#eff6ff;color:#1d4ed8;display:block}
 .ss-status.done{background:#d1fae5;color:#065f46;display:block}
 .ss-status.error{background:#fee2e2;color:#991b1b;display:block}
+/* PDF rich report */
+.rr-sect{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:14px 0 7px;display:flex;align-items:center;gap:8px}
+.rr-sect::after{content:"";flex:1;height:1px;background:var(--border)}
+.rr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:7px}
+.rr-types{display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:7px}
+.rr-tcard{background:var(--cream);border:1px solid var(--border);border-radius:9px;padding:9px;text-align:center}
+.rr-tcard .n{font-family:var(--font-head);font-size:24px;font-weight:700;color:var(--navy)}
+.rr-tcard .l{font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-top:2px}
+.rr-tcard .bar{height:4px;border-radius:2px;background:var(--cream3);margin-top:6px;overflow:hidden}
+.rr-tcard .bar i{display:block;height:100%;border-radius:2px}
+.rr-sub{font-size:10px;color:var(--navy2);margin-top:4px;border-top:1px dashed var(--border);padding-top:4px}
+.rr-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px}
+.rr-tab{border:1px solid var(--border);background:var(--card);border-radius:999px;padding:5px 13px;font-size:11px;font-weight:600;cursor:pointer;color:var(--navy);font-family:var(--font-body)}
+.rr-tab .c{font-weight:700;color:var(--navy2)}
+.rr-tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.rr-tab.on .c{color:#fff}
+.rr-panel{display:none}.rr-panel.on{display:block}
 /* Report modal */
 .report-card{background:var(--navy3);border-radius:10px;padding:1rem;color:#fff;font-family:var(--font-body);margin-bottom:.9rem}
 .report-hd{font-family:var(--font-head);font-size:14px;font-weight:700;color:#fff;margin-bottom:.65rem}
@@ -409,6 +432,17 @@ html,body{font-family:var(--font-body);font-size:13px;background:var(--bg);color
       </div>
     </div>
   </div>
+  <div class="card" style="margin-top:1rem">
+    <div class="sh">&#128190; Backup &amp; Restore</div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Saves your entire dashboard &mdash; reports, links, notes, and every uploaded file &mdash; into one file on your computer. Use <b>Download backup</b> before moving the app to a new address (like GitHub) or a new device, then <b>Restore</b> there to bring everything back exactly as it was. Also makes a great weekly safety copy.</p>
+    <div class="wn-actions">
+      <button class="wn-btn" onclick="exportBackup()">&#11015;&#65039; Download backup</button>
+      <button class="wn-btn" onclick="document.getElementById('restore-input').click()">&#11014;&#65039; Restore from backup</button>
+      <input type="file" id="restore-input" accept="application/json,.json" style="display:none" onchange="importBackup(this)">
+      <span class="wn-confirm" id="backup-confirm"></span>
+    </div>
+    <div class="ss-status" id="backup-status" style="margin-top:8px"></div>
+  </div>
 </div>
 
 <!-- CHECKLIST -->
@@ -454,6 +488,7 @@ html,body{font-family:var(--font-body);font-size:13px;background:var(--bg);color
   <div class="subtabs">
     <button class="stab on" onclick="showSub('analytics','social',this)">Social Media</button>
     <button class="stab" onclick="showSub('analytics','gbp',this)">Google Business</button>
+    <button class="stab" onclick="showSub('analytics','ga',this)">&#128202; Google Analytics</button>
     <button class="stab" onclick="showSub('analytics','yelp',this)">Yelp</button>
     <button class="stab" onclick="showSub('analytics','funnel',this)">&#128200; Sales Funnel</button>
   </div>
@@ -485,14 +520,16 @@ html,body{font-family:var(--font-body);font-size:13px;background:var(--bg);color
             &nbsp;
             <button class="sh-act" onclick="document.getElementById('pdf-trigger').click()">&#128196; Fill from PDF</button>
           </div>
-          <div class="ss-drop">
+          <div class="ss-drop" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="this.classList.remove('drag');handleSocialDrop(event)">
             <input type="file" id="ss-trigger" accept="image/*" onchange="handleScreenshot(this)">
             <input type="file" id="pdf-trigger" accept="application/pdf" onchange="handlePlatformPDF(this)" style="display:none">
-            <div class="ss-drop-ico">&#128247;</div>
-            <div class="ss-drop-lbl">Drop screenshot or use PDF button above for SocialPilot/Meta reports</div>
-            <div class="ss-drop-sub">Claude reads the numbers and fills in all metrics automatically</div>
+            <div class="ss-drop-ico">&#128196;</div>
+            <div class="ss-drop-lbl">Drop your SocialPilot PDF here (or use the buttons above)</div>
+            <div class="ss-drop-sub">PDFs are read right here on your device &mdash; no upload, no internet needed</div>
           </div>
           <div class="ss-status" id="ss-status"></div>
+          <div id="pdf-date-range" style="font-size:11px;color:var(--muted);margin-top:6px"></div>
+          <div id="rich-report" style="margin-top:6px"></div>
           <div class="form-grid" id="form-grid" style="margin-top:9px"></div>
           <button class="save-btn" onclick="saveAnalytics()">Save Weekly Stats</button>
           <span class="confirm" id="analytics-confirm">Saved!</span>
@@ -559,6 +596,36 @@ html,body{font-family:var(--font-body);font-size:13px;background:var(--bg);color
           </div>
           <div id="sp-keywords-list"></div>
         </div>
+        <div class="sh" style="margin-top:.9rem">&#128196; Documents &amp; Links
+          <button class="add-btn" style="margin-left:auto;font-size:10px;padding:4px 10px" onclick="openAddLink('search')">+ Add Link</button>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Save Search Console / Google Ads report PDFs and shortcut links here. Stored on this device &mdash; reopen anytime.</p>
+        <div id="search-links-list"></div>
+        <div class="ss-drop" style="margin-top:10px">
+          <input type="file" id="search-file-trigger" multiple onchange="filePick(this,'search-file-status','search')">
+          <div class="ss-drop-ico">&#128196;</div>
+          <div class="ss-drop-lbl">Drop a PDF (or any file) to save it here</div>
+          <div class="ss-drop-sub">Stored on your device &mdash; stays after refresh</div>
+        </div>
+        <div class="ss-status" id="search-file-status"></div>
+        <div id="search-files-list" style="margin-top:8px"></div>
+      </div>
+    </div>
+    <div id="analytics-ga" class="subpanel">
+      <div class="card">
+        <div class="sh">&#128202; Google Analytics (Website)
+          <button class="add-btn" style="margin-left:auto;font-size:10px;padding:4px 10px" onclick="openAddLink('ga')">+ Add Link</button>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:11px">Save your Google Analytics dashboard link and drop website report PDFs here to reopen anytime. Stored on this device.</p>
+        <div id="ga-links-list"></div>
+        <div class="ss-drop" style="margin-top:10px">
+          <input type="file" id="ga-file-trigger" multiple onchange="filePick(this,'ga-file-status','ga')">
+          <div class="ss-drop-ico">&#128196;</div>
+          <div class="ss-drop-lbl">Drop a PDF (or any file) to save it here</div>
+          <div class="ss-drop-sub">Stored on your device &mdash; reopen anytime, stays after refresh</div>
+        </div>
+        <div class="ss-status" id="ga-file-status"></div>
+        <div id="ga-files-list" style="margin-top:8px"></div>
       </div>
     </div>
     <div id="analytics-yelp" class="subpanel">
@@ -574,6 +641,7 @@ html,body{font-family:var(--font-body);font-size:13px;background:var(--bg);color
         </div>
         <div id="yelp-reviews"></div>
       </div>
+    </div>
     <div id="analytics-funnel" class="subpanel">
       <div class="card">
         <div class="sh">&#128200; Sales Funnel Report
@@ -610,7 +678,6 @@ html,body{font-family:var(--font-body);font-size:13px;background:var(--bg);color
         </div>
       </div>
     </div>
-    </div>
   </div>
 </div>
 
@@ -625,10 +692,20 @@ html,body{font-family:var(--font-body);font-size:13px;background:var(--bg);color
     <div id="resources-links" class="subpanel on">
       <div class="card">
         <div class="sh">&#128279; Links &amp; Files
-          <button class="add-btn" style="margin-left:auto;font-size:10px;padding:4px 10px" onclick="openAddLink()">+ Add Link</button>
+          <button class="add-btn" style="margin-left:auto;font-size:10px;padding:4px 10px" onclick="openAddLink('marketing')">+ Add Link</button>
         </div>
         <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Store links to shared drives, password docs, brand assets, anything you access regularly.</p>
         <div id="res-links-list"></div>
+        <div class="sh" style="margin-top:.9rem">&#128193; Saved Files</div>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Drag and drop any files (PDFs, spreadsheets, images) to keep them in one place. They stay saved on this device after you refresh or reopen the app.</p>
+        <div class="ss-drop">
+          <input type="file" id="res-file-trigger" multiple onchange="filePick(this,'res-file-status','marketing')">
+          <div class="ss-drop-ico">&#128228;</div>
+          <div class="ss-drop-lbl">Drop files here, or click to choose</div>
+          <div class="ss-drop-sub">Saved on your device &mdash; persists across refreshes</div>
+        </div>
+        <div class="ss-status" id="res-file-status"></div>
+        <div id="res-files-list" style="margin-top:8px"></div>
       </div>
     </div>
     <div id="resources-vendors" class="subpanel">
@@ -863,12 +940,12 @@ function defComms(){return[
 ];}
 
 // STATE
-let ST={todos:[],focus:"",wins:"",notes:"",gbp:{},checklist:{lastDate:"",checked:{}},analytics:{instagram:[],facebook:[],tiktok:[],youtube:[]},searchPerf:{console:[],ads:[],keywords:[]},platformNotes:{instagram:"",facebook:"",tiktok:"",youtube:""},funnelData:null,funnelLastUpdated:null,daily:null,contacts:[],orgNodes:JSON.parse(JSON.stringify(DEFAULT_ORG)),communities:[],constGroups:JSON.parse(JSON.stringify(DEFAULT_CONST)),orgCollapsed:{},howto:[],resLinks:[],yelpReviews:[]};
+let ST={todos:[],focus:"",wins:"",notes:"",gbp:{},checklist:{lastDate:"",checked:{}},analytics:{instagram:[],facebook:[],tiktok:[],youtube:[]},searchPerf:{console:[],ads:[],keywords:[]},platformNotes:{instagram:"",facebook:"",tiktok:"",youtube:""},funnelData:null,funnelLastUpdated:null,daily:null,contacts:[],orgNodes:JSON.parse(JSON.stringify(DEFAULT_ORG)),communities:[],constGroups:JSON.parse(JSON.stringify(DEFAULT_CONST)),orgCollapsed:{},howto:[],resLinks:[],yelpReviews:[],savedFiles:[]};
 let constRendered=false;
 
 function loadST(){
   try{const r=localStorage.getItem(DKEY);if(r){const d=JSON.parse(r);
-  ["todos","focus","wins","notes","gbp","checklist","analytics","searchPerf","platformNotes","funnelData","funnelLastUpdated","daily","contacts","orgNodes","communities","constGroups","orgCollapsed","howto","resLinks","yelpReviews"].forEach(k=>{if(d[k]!==undefined)ST[k]=d[k];});}}catch(e){}
+  ["todos","focus","wins","notes","gbp","checklist","analytics","searchPerf","platformNotes","funnelData","funnelLastUpdated","daily","contacts","orgNodes","communities","constGroups","orgCollapsed","howto","resLinks","yelpReviews","savedFiles"].forEach(k=>{if(d[k]!==undefined)ST[k]=d[k];});}}catch(e){}
   if(!ST.communities||!ST.communities.length)ST.communities=defComms();
 }
 function saveST(){try{localStorage.setItem(DKEY,JSON.stringify(ST));}catch(e){}}
@@ -1036,7 +1113,7 @@ function switchSocial(plat,btn){
     ov.style.display="";det.style.display="none";renderSocialOverview();
   }else{
     ov.style.display="none";det.style.display="";
-    curPlat=plat;renderMetrics();renderFormGrid();setTimeout(renderCharts,100);renderHist();renderMonthlySummary();renderPlatformNotes();
+    curPlat=plat;renderMetrics();renderFormGrid();setTimeout(renderCharts,100);renderHist();renderMonthlySummary();renderPlatformNotes();renderRichReport(plat);
   }
 }
 function renderSocialOverview(){
@@ -1074,36 +1151,192 @@ function savePlatformNote(){
   ST.platformNotes[curPlat]=ta.value;saveST();flash("plat-notes-confirm","Saved!");
 }
 
-// ── PDF FILL ─────────────────────────────────────────────────────────────────
-function handlePlatformPDF(input){
-  const file=input.files[0];if(!file)return;
-  const reader=new FileReader();
-  reader.onload=async(e)=>{
-    const b64=e.target.result.split(",")[1];
-    const status=document.getElementById("ss-status");
-    status.className="ss-status loading";status.textContent="Claude is reading your PDF report...";
-    try{
-      const fields=PLAT_FIELDS[curPlat]||[];
-      const fieldDesc=fields.map(f=>f.k+":"+f.l).join(", ");
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:800,messages:[{role:"user",content:[{type:"document",source:{type:"base64",media_type:"application/pdf",data:b64}},{type:"text",text:"Extract ALL metrics from this "+PLAT_LBL[curPlat]+" analytics PDF report. Return ONLY valid JSON with these exact keys (use 0 if not found): {"+fields.map(f=>'"'+f.k+'":0').join(",")+',"dateRange":""}. Return ONLY the JSON, nothing else.'}]}]})});
-      const data=await resp.json();
-      const txt=data.content[0].text.trim().replace(/```json|```/g,"").trim();
-      const result=JSON.parse(txt);
-      // Fill form fields
-      fields.forEach(f=>{const el=document.getElementById("spf-"+f.k)||document.getElementById("af-"+f.k);if(el&&result[f.k]!=null)el.value=result[f.k];});
-      // Also fill generic METRICS fields
-      const map={views:result.reach||result.video_views||result.views||0,likes:result.likes||result.reactions||0,comments:result.comments||0,shares:result.shares||0,followers_gained:result.new_fans||result.new_followers||result.new_subscribers||0,followers_lost:0};
-      Object.entries(map).forEach(([k,v])=>{const el=document.getElementById("af-"+k);if(el)el.value=v;});
-      if(result.dateRange){const dr=document.getElementById("pdf-date-range");if(dr)dr.textContent="Report period: "+result.dateRange;}
-      status.className="ss-status done";status.textContent="Done! Review the numbers below and hit Save.";
-    }catch(err){
-      status.className="ss-status error";status.textContent="Could not read the PDF. Try a SocialPilot or Meta export PDF.";
-      console.error(err);
-    }
-    input.value="";
-  };
-  reader.readAsDataURL(file);
+// ── LOCAL PDF READER (no API — runs entirely in your browser) ────────────────
+function ssNum(tok){
+  if(tok==null)return null;
+  const t=String(tok).replace(/,/g,"").trim();
+  const m=t.match(/^(\d+(?:\.\d+)?)([KMB]?)$/i);if(!m)return null;
+  let v=parseFloat(m[1]);const s=m[2].toUpperCase();
+  if(s==="K")v*=1e3;else if(s==="M")v*=1e6;else if(s==="B")v*=1e9;
+  return Math.round(v);
 }
+async function pdfWords(file){
+  const buf=await file.arrayBuffer();
+  const pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
+  const words=[];let fullText="";
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);const vp=page.getViewport({scale:1});
+    const tc=await page.getTextContent();
+    for(const it of tc.items){
+      const raw=it.str||"";const str=raw.trim();if(!str)continue;
+      const left=it.transform[4],top=vp.height-it.transform[5],w=it.width||0;
+      const parts=str.split(/\s+/);
+      if(parts.length===1){words.push({t:str,x:left+w/2,top,pg:p});}
+      else{const total=str.length||1;let cur=0;
+        for(const pw of parts){const st=raw.indexOf(pw,cur);const c=st<0?cur:st;
+          words.push({t:pw,x:left+((c+pw.length/2)/total)*w,top,pg:p});cur=c+pw.length;}}
+      fullText+=str+" ";
+    }
+    fullText+="\n";
+  }
+  return {words,fullText};
+}
+function ssFindLabel(words,label){
+  const toks=label.split(/\s+/);
+  for(let i=0;i<words.length;i++){
+    if(words[i].t!==toks[0])continue;
+    let ok=true;const xs=[words[i].x];const top=words[i].top,pg=words[i].pg;
+    for(let j=1;j<toks.length;j++){const w=words[i+j];
+      if(!w||w.t!==toks[j]||w.pg!==pg||Math.abs(w.top-top)>4){ok=false;break;}xs.push(w.x);}
+    if(ok)return{x:xs.reduce((a,b)=>a+b,0)/xs.length,top,pg};
+  }
+  return null;
+}
+function ssBelow(words,label,wantPct){
+  const a=ssFindLabel(words,label);if(!a)return null;
+  let best=null,bestd=1e9;
+  for(const w of words){
+    if(w.pg!==a.pg||w.top<=a.top+2||w.top>a.top+72)continue;
+    const isPct=/^\d+(?:\.\d+)?%$/.test(w.t);
+    if(wantPct){if(!isPct)continue;}else{if(isPct||ssNum(w.t)==null)continue;}
+    const d=Math.abs(w.x-a.x)+(w.top-a.top)*0.25;if(d<bestd){bestd=d;best=w.t;}
+  }
+  return best==null?null:(wantPct?best:ssNum(best));
+}
+function ssParen(label,fullText){
+  const re=new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\s*\\(([\\d.,KMB]+)\\)","i");
+  const m=(fullText||"").match(re);return m?ssNum(m[1]):null;
+}
+function ssRange(text){
+  const m=text.match(/([A-Z][a-z]{2}\s+\d{1,2},\s*\d{4})\s*to\s*([A-Z][a-z]{2}\s+\d{1,2},\s*\d{4})/);
+  return m?m[1]+" – "+m[2]:null;
+}
+function parseFB(words,text){
+  const v=(l,p)=>ssBelow(words,l,p);
+  return {range:ssRange(text),profile:{
+    followers:v("Total Page Likes"),reach:v("Page Reach"),new_fans:v("New Fans"),
+    page_views:v("Page Views"),posts:v("Posts Published"),impressions:v("Posts Impressions"),
+    impr_organic:ssParen("Organic",text),impr_paid:ssParen("Paid",text),impr_viral:ssParen("Viral",text),
+    engagement:v("Posts Engagement"),reactions:v("Posts Reactions"),comments:v("Posts Comments"),
+    shares:v("Posts Shares"),video_plays:v("Posts Video Plays")},
+    types:{Image:ssParen("Image",text),Video:ssParen("Video",text),Text:ssParen("Text",text),Link:ssParen("Link",text)}};
+}
+function parseIG(words,text){
+  const v=(l,p)=>ssBelow(words,l,p);
+  return {range:ssRange(text),combined:{
+    followers:v("Total Followers"),new_followers:ssParen("New Followers",text),reach:v("Total Reach"),
+    views:v("Total Views"),interactions:v("Total Interactions"),interaction_rate:v("Interaction Rate",true),
+    link_taps:v("Profile Link Taps")},
+    posts:{published:v("Post Published"),reach:v("Post Reach"),views:v("Post Views"),interactions:v("Post Interactions"),likes:v("Post Likes"),comments:v("Post Comments"),saves:v("Post Saves"),shares:v("Post Shares"),rate:v("Post Interaction Rate",true)},
+    reels:{published:v("Reels Published"),reach:v("Reels Reach"),views:v("Reels Views"),interactions:v("Reels Interactions"),likes:v("Reels Likes"),comments:v("Reels Comments"),saves:v("Reels Saves"),shares:v("Reels Shares"),rate:v("Reel Interaction Rate",true)},
+    stories:{published:v("Stories Published"),reach:v("Stories Reach"),interactions:v("Stories Interaction"),replies:v("Stories Replies"),shares:v("Stories Shares")}};
+}
+
+function handleSocialDrop(ev){
+  ev.preventDefault();
+  const f=[...(ev.dataTransfer.files||[])].find(f=>f.type==="application/pdf"||/\.pdf$/i.test(f.name));
+  if(f){readSocialPDF(f);return;}
+  const img=[...(ev.dataTransfer.files||[])].find(f=>/^image\//.test(f.type));
+  if(img&&typeof handleScreenshot==="function"){const dt=new DataTransfer();dt.items.add(img);const inp=document.getElementById("ss-trigger");inp.files=dt.files;handleScreenshot(inp);return;}
+  const s=document.getElementById("ss-status");s.className="ss-status error";s.textContent="Please drop a PDF report.";
+}
+function handlePlatformPDF(input){const f=input.files[0];if(f)readSocialPDF(f);input.value="";}
+
+async function readSocialPDF(file){
+  const status=document.getElementById("ss-status");
+  status.className="ss-status loading";status.textContent="Reading "+file.name+" on your device…";
+  if(!window.pdfjsLib){status.className="ss-status error";status.textContent="PDF engine still loading — try again in a second.";return;}
+  try{
+    const {words,fullText}=await pdfWords(file);
+    const isFB=/Facebook Profile/i.test(fullText),isIG=/Instagram Profile/i.test(fullText);
+    if(!isFB&&!isIG){status.className="ss-status error";status.textContent="Couldn't tell if this is a Facebook or Instagram report.";return;}
+    const plat=isFB?"facebook":"instagram";
+    const report=isFB?parseFB(words,fullText):parseIG(words,fullText);
+    if(!ST.socialReports)ST.socialReports={};
+    ST.socialReports[plat]=report;saveST();
+    // switch the view to the detected platform
+    const idx=["instagram","facebook","tiktok","youtube"].indexOf(plat);
+    const tab=document.querySelector(".soc-tab:nth-child("+(idx+2)+")");if(tab)tab.click();
+    // pre-fill the weekly Save form from the report
+    fillWeeklyForm(plat,report);
+    if(report.range){document.getElementById("pdf-date-range").textContent="Report period: "+report.range;}
+    renderRichReport(plat);
+    status.className="ss-status done";status.textContent="Read "+(isFB?"Facebook":"Instagram")+" report ✓  Numbers below — review and hit Save Weekly Stats.";
+  }catch(err){
+    console.error(err);
+    status.className="ss-status error";status.textContent="Couldn't read that PDF. Make sure it's the SocialPilot export.";
+  }
+}
+
+function fillWeeklyForm(plat,r){
+  let map;
+  if(plat==="facebook"){const p=r.profile;
+    map={views:p.impressions||p.reach||0,likes:p.reactions||0,comments:p.comments||0,shares:p.shares||0,followers_gained:p.new_fans||0,followers_lost:0};}
+  else{const c=r.combined,po=r.posts,re=r.reels;
+    map={views:c.views||0,likes:(po.likes||0)+(re.likes||0),comments:(po.comments||0)+(re.comments||0),shares:(po.shares||0)+(re.shares||0),followers_gained:c.new_followers||0,followers_lost:0};}
+  Object.entries(map).forEach(([k,val])=>{const el=document.getElementById("af-"+k);if(el)el.value=val;});
+}
+
+// ── RICH REPORT PANEL (all metrics + post-type breakdown) ────────────────────
+function rrCard(label,val,feat){
+  const dv=val==null?"--":Number(val).toLocaleString();
+  return `<div class="mcard"><div class="mcard-lbl">${label}</div><div class="mcard-val">${dv}</div></div>`;
+}
+function renderRichReport(plat){
+  const host=document.getElementById("rich-report");if(!host)return;
+  const r=(ST.socialReports||{})[plat];
+  if(!r){host.innerHTML="";return;}
+  let h="";
+  if(plat==="facebook"){
+    const p=r.profile;
+    const cards=[["Page Likes",p.followers],["Page Reach",p.reach],["New Fans",p.new_fans],["Page Views",p.page_views],
+      ["Posts Published",p.posts],["Post Impressions",p.impressions],["Engagement",p.engagement],["Reactions",p.reactions],
+      ["Comments",p.comments],["Shares",p.shares],["Video Plays",p.video_plays]]
+      .map(([l,v])=>rrCard(l,v)).join("");
+    let impSub="";
+    if(p.impr_organic!=null||p.impr_paid!=null||p.impr_viral!=null)
+      impSub=`<div class="rr-sub">Impressions split — Organic ${fmtN(p.impr_organic)} · Paid ${fmtN(p.impr_paid)} · Viral ${fmtN(p.impr_viral)}</div>`;
+    const t=r.types||{};const tmax=Math.max(1,t.Image||0,t.Video||0,t.Text||0,t.Link||0);
+    const tcards=[["Image",t.Image],["Video",t.Video],["Text",t.Text],["Link",t.Link]].map(([n,v])=>
+      `<div class="rr-tcard"><div class="n">${v==null?0:v}</div><div class="l">${n}</div><div class="bar"><i style="width:${((v||0)/tmax*100)}%;background:var(--navy2)"></i></div></div>`).join("");
+    h=`<div class="rr-sect">Page &amp; Post Metrics</div><div class="rr-grid">${cards}</div>${impSub}
+       <div class="rr-sect">Content Published — by type</div><div class="rr-types">${tcards}</div>`;
+  }else{
+    const c=r.combined;
+    const combined=[["Followers",c.followers],["New Followers",c.new_followers],["Reach",c.reach],["Views",c.views],["Interactions",c.interactions]]
+      .map(([l,v])=>rrCard(l,v)).join("")
+      +`<div class="mcard"><div class="mcard-lbl">Interaction Rate</div><div class="mcard-val">${c.interaction_rate||"--"}</div></div>`
+      +rrCard("Link Taps",c.link_taps);
+    const counts=[["Posts",r.posts.published],["Reels",r.reels.published],["Stories",r.stories.published]];
+    const cmax=Math.max(1,...counts.map(x=>x[1]||0));
+    const tcards=counts.map(([n,v])=>`<div class="rr-tcard"><div class="n">${v==null?0:v}</div><div class="l">${n}</div><div class="bar"><i style="width:${((v||0)/cmax*100)}%;background:#e1306c"></i></div></div>`).join("");
+    const panel=(obj,fields)=>fields.map(([k,l])=>k==="rate"
+        ?`<div class="mcard"><div class="mcard-lbl">${l}</div><div class="mcard-val">${obj.rate||"--"}</div></div>`
+        :rrCard(l,obj[k])).join("");
+    const pf=[["published","Published"],["reach","Reach"],["views","Views"],["interactions","Interactions"],["likes","Likes"],["comments","Comments"],["saves","Saves"],["shares","Shares"],["rate","Int. Rate"]];
+    const sf=[["published","Published"],["reach","Reach"],["interactions","Interactions"],["replies","Replies"],["shares","Shares"]];
+    h=`<div class="rr-sect">Combined Account Totals</div><div class="rr-grid">${combined}</div>
+       <div class="rr-sect">Content Published — by type</div><div class="rr-types">${tcards}</div>
+       <div class="rr-sect">Breakdown by Content Type</div>
+       <div class="rr-tabs">
+         <button class="rr-tab on" onclick="rrTab(this,'posts')">Posts <span class="c">${r.posts.published||0}</span></button>
+         <button class="rr-tab" onclick="rrTab(this,'reels')">Reels <span class="c">${r.reels.published||0}</span></button>
+         <button class="rr-tab" onclick="rrTab(this,'stories')">Stories <span class="c">${r.stories.published||0}</span></button>
+       </div>
+       <div class="rr-panel on" data-k="posts"><div class="rr-grid">${panel(r.posts,pf)}</div></div>
+       <div class="rr-panel" data-k="reels"><div class="rr-grid">${panel(r.reels,pf)}</div></div>
+       <div class="rr-panel" data-k="stories"><div class="rr-grid">${panel(r.stories,sf)}</div></div>`;
+  }
+  host.innerHTML=h;
+}
+function rrTab(btn,k){
+  const host=document.getElementById("rich-report");
+  host.querySelectorAll(".rr-tab").forEach(t=>t.classList.remove("on"));
+  host.querySelectorAll(".rr-panel").forEach(p=>p.classList.remove("on"));
+  btn.classList.add("on");
+  const pn=host.querySelector('.rr-panel[data-k="'+k+'"]');if(pn)pn.classList.add("on");
+}
+function fmtN(n){return n==null?"--":Number(n).toLocaleString();}
 
 // ── UPDATE renderFormGrid TO SHOW EXPANDED FIELDS ────────────────────────────
 
@@ -1532,14 +1765,109 @@ function saveHowTo(id){const h=ST.howto.find(x=>x.id===id);if(!h)return;h.title=
 function delHowTo(id){if(!confirm("Remove this instruction?"))return;ST.howto=ST.howto.filter(x=>x.id!==id);saveST();renderHowTo();}
 
 // RESOURCE LINKS
+const RES_AREAS=[{a:"marketing",links:"res-links-list",files:"res-files-list"},
+                 {a:"search",links:"search-links-list",files:"search-files-list"},
+                 {a:"ga",links:"ga-links-list",files:"ga-files-list"}];
 function renderResLinks(){
-  const el=document.getElementById("res-links-list");if(!el)return;
-  if(!ST.resLinks||!ST.resLinks.length){el.innerHTML='<div class="empty-state">No links added yet.</div>';return;}
-  el.innerHTML=ST.resLinks.map(l=>`<div class="res-link-item">&#128279; <span class="res-link-lbl">${esc(l.label)}</span>${l.url?`<a class="res-link-url" href="${esc(l.url)}" target="_blank">${esc(l.url)}</a>`:'<span style="color:#ccc;font-size:11px">No URL</span>'}<button class="res-btn del" onclick="delLink(${l.id})">&#x2715;</button></div>`).join("");
+  RES_AREAS.forEach(x=>{
+    const el=document.getElementById(x.links);if(!el)return;
+    const list=(ST.resLinks||[]).filter(l=>(l.area||"marketing")===x.a);
+    el.innerHTML=list.length
+      ?list.map(l=>`<div class="res-link-item">&#128279; <span class="res-link-lbl">${esc(l.label)}</span>${l.url?`<a class="res-link-url" href="${esc(l.url)}" target="_blank">${esc(l.url)}</a>`:'<span style="color:#ccc;font-size:11px">No URL</span>'}<button class="res-btn del" onclick="delLink(${l.id})">&#x2715;</button></div>`).join("")
+      :'<div class="empty-state">No links added yet.</div>';
+  });
 }
-function openAddLink(){document.getElementById("modal-body").innerHTML=`<div class="mt">Add Link</div><div class="fl">Label</div><input class="fi" id="rl-lb" placeholder="e.g. Password Doc, Brand Assets"><div class="fl">URL</div><input class="fi" id="rl-ur" placeholder="https://"><br><button class="bs" onclick="submitLink()">Add</button><button class="bc" onclick="closeModal()">Cancel</button>`;openModal();}
-function submitLink(){const lb=document.getElementById("rl-lb").value.trim();if(!lb)return;if(!ST.resLinks)ST.resLinks=[];ST.resLinks.push({id:Date.now(),label:lb,url:document.getElementById("rl-ur").value.trim()});saveST();closeModal();renderResLinks();}
+let _linkArea="marketing";
+function openAddLink(area){_linkArea=area||"marketing";document.getElementById("modal-body").innerHTML=`<div class="mt">Add Link</div><div class="fl">Label</div><input class="fi" id="rl-lb" placeholder="e.g. Google Analytics dashboard"><div class="fl">URL</div><input class="fi" id="rl-ur" placeholder="https://"><br><button class="bs" onclick="submitLink()">Add</button><button class="bc" onclick="closeModal()">Cancel</button>`;openModal();}
+function submitLink(){const lb=document.getElementById("rl-lb").value.trim();if(!lb)return;if(!ST.resLinks)ST.resLinks=[];ST.resLinks.push({id:Date.now(),label:lb,url:document.getElementById("rl-ur").value.trim(),area:_linkArea});saveST();closeModal();renderResLinks();}
 function delLink(id){ST.resLinks=ST.resLinks.filter(x=>x.id!==id);saveST();renderResLinks();}
+
+// ── SAVED FILES (persisted in IndexedDB; metadata in ST) ─────────────────────
+const IDB_NAME="riversideFiles",IDB_STORE="files";
+function idbOpen(){return new Promise((res,rej)=>{const r=indexedDB.open(IDB_NAME,1);
+  r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(IDB_STORE))r.result.createObjectStore(IDB_STORE);};
+  r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+async function idbPut(id,blob){const db=await idbOpen();return new Promise((res,rej)=>{const tx=db.transaction(IDB_STORE,"readwrite");tx.objectStore(IDB_STORE).put(blob,id);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);});}
+async function idbGet(id){const db=await idbOpen();return new Promise((res,rej)=>{const tx=db.transaction(IDB_STORE,"readonly");const rq=tx.objectStore(IDB_STORE).get(id);rq.onsuccess=()=>res(rq.result);rq.onerror=()=>rej(rq.error);});}
+async function idbDel(id){const db=await idbOpen();return new Promise((res,rej)=>{const tx=db.transaction(IDB_STORE,"readwrite");tx.objectStore(IDB_STORE).delete(id);tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);});}
+
+function fileIcon(type){return /pdf/i.test(type)?"&#128196;":/image/i.test(type)?"&#128247;":/sheet|excel|csv|spreadsheet/i.test(type)?"&#128202;":"&#128206;";}
+function fileSize(n){return n<1024?n+" B":n<1048576?(n/1024).toFixed(0)+" KB":(n/1048576).toFixed(1)+" MB";}
+async function saveFiles(fileList,statusId,area){
+  const st=statusId?document.getElementById(statusId):null;
+  if(st){st.className="ss-status loading";st.textContent="Saving "+fileList.length+" file(s)…";}
+  try{
+    for(const f of fileList){
+      const id="f"+Date.now()+"_"+Math.random().toString(36).slice(2,7);
+      await idbPut(id,f);
+      if(!ST.savedFiles)ST.savedFiles=[];
+      ST.savedFiles.push({id,name:f.name,type:f.type||"",size:f.size,savedAt:Date.now(),area:area||"marketing"});
+    }
+    saveST();renderFiles();
+    if(st){st.className="ss-status done";st.textContent="Saved &#10003;  Your files stay here after refresh.";}
+  }catch(err){console.error(err);if(st){st.className="ss-status error";st.textContent="Could not save the file(s).";}}
+}
+async function openSavedFile(id){
+  try{const blob=await idbGet(id);if(!blob){alert("File not found in storage.");return;}
+    const url=URL.createObjectURL(blob);window.open(url,"_blank");setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }catch(e){alert("Could not open file.");}
+}
+async function delSavedFile(id){
+  if(!confirm("Delete this saved file? This cannot be undone."))return;
+  try{await idbDel(id);}catch(e){}
+  ST.savedFiles=(ST.savedFiles||[]).filter(x=>x.id!==id);saveST();renderFiles();
+}
+function renderFiles(){
+  RES_AREAS.forEach(x=>{
+    const el=document.getElementById(x.files);if(!el)return;
+    const list=(ST.savedFiles||[]).filter(f=>(f.area||"marketing")===x.a).sort((a,b)=>b.savedAt-a.savedAt);
+    el.innerHTML=list.length
+      ?list.map(f=>`<div class="res-link-item">${fileIcon(f.type)} <span class="res-link-lbl">${esc(f.name)}</span><span style="font-size:10px;color:var(--muted);margin-right:6px">${fileSize(f.size)}</span><button class="res-btn" onclick="openSavedFile('${f.id}')">Open</button><button class="res-btn del" onclick="delSavedFile('${f.id}')">&#x2715;</button></div>`).join("")
+      :'<div class="empty-state">No files saved yet.</div>';
+  });
+}
+function fileDrop(ev,statusId,area){
+  ev.preventDefault();ev.currentTarget.classList.remove("drag");
+  const files=[...(ev.dataTransfer.files||[])];
+  if(files.length)saveFiles(files,statusId,area);
+}
+function filePick(input,statusId,area){if(input.files&&input.files.length)saveFiles([...input.files],statusId,area);input.value="";}
+
+// ── BACKUP & RESTORE (whole dashboard: state + stored files) ─────────────────
+function blobToB64(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]);r.onerror=()=>rej(r.error);r.readAsDataURL(blob);});}
+function b64ToBlob(b64,type){const bin=atob(b64);const arr=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)arr[i]=bin.charCodeAt(i);return new Blob([arr],{type:type||"application/octet-stream"});}
+async function exportBackup(){
+  const st=document.getElementById("backup-status");
+  if(st){st.className="ss-status loading";st.textContent="Preparing backup…";}
+  try{
+    const files=[];
+    for(const f of (ST.savedFiles||[])){
+      let blob=null;try{blob=await idbGet(f.id);}catch(e){}
+      if(!blob)continue;
+      files.push({id:f.id,name:f.name,type:f.type,size:f.size,savedAt:f.savedAt,area:f.area||"marketing",data:await blobToB64(blob)});
+    }
+    const backup={app:"riverside-dashboard",version:1,exportedAt:new Date().toISOString(),state:JSON.parse(localStorage.getItem(DKEY)||"{}"),files};
+    const blob=new Blob([JSON.stringify(backup)],{type:"application/json"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+    a.download="riverside-backup-"+new Date().toISOString().slice(0,10)+".json";a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+    if(st){st.className="ss-status done";st.textContent="Backup downloaded &#10003;  ("+files.length+" file(s) included). Keep it somewhere safe.";}
+  }catch(e){console.error(e);if(st){st.className="ss-status error";st.textContent="Could not create the backup.";}}
+}
+async function importBackup(input){
+  const file=input.files[0];input.value="";if(!file)return;
+  if(!confirm("Restore from this backup?\n\nThis replaces the dashboard's current data on THIS device/address with the backup's contents, then reloads."))return;
+  const st=document.getElementById("backup-status");
+  if(st){st.className="ss-status loading";st.textContent="Restoring…";}
+  try{
+    const backup=JSON.parse(await file.text());
+    if(backup.app!=="riverside-dashboard")throw new Error("not a dashboard backup");
+    if(backup.state)localStorage.setItem(DKEY,JSON.stringify(backup.state));
+    for(const f of (backup.files||[])){try{await idbPut(f.id,b64ToBlob(f.data,f.type));}catch(e){}}
+    if(st){st.className="ss-status done";st.textContent="Restored &#10003;  Reloading…";}
+    setTimeout(()=>location.reload(),700);
+  }catch(e){console.error(e);if(st){st.className="ss-status error";st.textContent="That doesn't look like a valid dashboard backup file.";}}
+}
 
 // CONTACTS
 let cSearch="",cPri="all";
@@ -1735,6 +2063,7 @@ initSearchPerf();
 initClock();if(ST.funnelData)renderFunnel();
 renderHowTo();
 renderResLinks();
+renderFiles();
 renderContacts();
 renderComms();
 renderYelp();
